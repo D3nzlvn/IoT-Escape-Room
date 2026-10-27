@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALICE // Containment Protocol</title>
+  <style>
+    :root {
+      --bg: #05080e;
+      --card-bg: rgba(10, 18, 32, 0.92);
+      --cyan: #00f3ff;
+      --cyan-glow: rgba(0, 243, 255, 0.35);
+      --amber: #ffb703;
+      --red: #ff2244;
+      --green: #00ff88;
+      --text: #c5e0f8;
+      --border: #162947;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Verdana, 'Segoe UI', Arial, sans-serif; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Neural Background */
+    canvas#neural-bg {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.25;
+    }
+
+    /* Scanlines */
+    body::after {
+      content: " ";
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+      z-index: 99;
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+
+    /* Header */
+    header {
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 35px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(5, 8, 14, 0.95);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand h1 {
+      font-size: 24px;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    .status-badge {
+      font-size: 15px;
+      padding: 4px 10px;
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: 4px;
+      letter-spacing: 1px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* Main Container */
+    main {
+      z-index: 10;
+      flex: 1;
+      max-width: 960px;
+      width: 95%;
+      margin: 30px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    .card-title {
+      font-size: 16px;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Screens */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* --- SCREEN 1: ALICE LOCKED CORE --- */
+    #aura-locked-core {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .core-ring {
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      border: 3px dashed var(--red);
+      margin: 0 auto 25px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spinRing 20s linear infinite;
+      box-shadow: 0 0 30px rgba(255, 34, 68, 0.25);
+    }
+    @keyframes spinRing { 100% { transform: rotate(360deg); } }
+
+    .core-glyph {
+      font-size: 55px;
+      animation: corePulse 2s ease-in-out infinite alternate;
+    }
+    @keyframes corePulse {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      100% { transform: scale(1.1); opacity: 1; }
+    }
+
+    /* Input & Button */
+    input[type="text"] {
+      background: #091322;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 12px 20px;
+      font-size: 20px;
+      border-radius: 4px;
+      outline: none;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.1);
+    }
+
+    button.btn-primary {
+      background: var(--cyan);
+      color: #030810;
+      border: none;
+      padding: 12px 26px;
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    button.btn-primary:hover {
+      box-shadow: 0 0 20px var(--cyan-glow);
+      transform: translateY(-1px);
+    }
+
+    /* --- GOOGLE reCAPTCHA BADGE --- */
+    .recaptcha-wrapper {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .g-recaptcha-badge {
+      width: 304px;
+      height: 76px;
+      background: #f9f9f9;
+      border: 1px solid #d3d3d3;
+      border-radius: 3px;
+      box-shadow: 0 0 4px 1px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      font-family: Roboto, Arial, sans-serif;
+      user-select: none;
+    }
+
+    .rc-left { display: flex; align-items: center; gap: 12px; }
+
+    .rc-checkbox-container {
+      width: 28px; height: 28px;
+      border: 2px solid #c1c1c1;
+      background: #fff;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .rc-checkbox-container:hover { border-color: #a0a0a0; }
+
+    .rc-spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4285F4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .rc-checkmark {
+      display: none;
+      width: 10px; height: 18px;
+      border: solid #0f9d58;
+      border-width: 0 3px 3px 0;
+      transform: rotate(45deg);
+      margin-bottom: 4px;
+    }
+
+    .rc-label { font-family: Roboto, Arial, sans-serif; font-size: 14px; color: #000; }
+    .rc-right { display: flex; flex-direction: column; align-items: center; font-family: Roboto, Arial, sans-serif; }
+    .rc-logo-svg { width: 32px; height: 32px; }
+    .rc-brand-text { font-size: 10px; color: #555; margin-top: 2px; }
+    .rc-terms-text { font-size: 8px; color: #888; }
+
+    /* --- NEAL.FUN MODAL POPUPS --- */
+    .rc-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rc-challenge-modal {
+      width: 440px;
+      background: #ffffff;
+      border: 1px solid #888;
+      border-radius: 2px;
+      box-shadow: 0 5px 35px rgba(0,0,0,0.85);
+      font-family: Roboto, Arial, sans-serif;
+      color: #333;
+      overflow: hidden;
+      animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn { 0% { transform: scale(0.92); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .rc-header {
+      background: #3b88fd;
+      color: #fff;
+      padding: 16px 20px;
+    }
+    .rc-header-sub { font-size: 15px; font-weight: 400; }
+    .rc-header-target { font-size: 26px; font-weight: 700; margin-top: 2px; }
+
+    .rc-body { padding: 6px; background: #fff; }
+
+    .grid-4x4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; background: #fff; }
+    .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; background: #fff; }
+
+    .photo-tile {
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+      line-height: 0;
+      border: 2px solid transparent;
+      transition: all 0.1s;
+    }
+    .photo-tile img { width: 100%; height: auto; display: block; }
+
+    .photo-tile.selected {
+      transform: scale(0.92);
+      border-color: #3b88fd;
+    }
+    .photo-tile.selected::after {
+      content: "✓";
+      position: absolute;
+      top: 4px; left: 4px;
+      width: 22px; height: 22px;
+      background: #3b88fd;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: 22px;
+      text-align: center;
+    }
+
+    .rc-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      border-top: 1px solid #e0e0e0;
+      background: #fff;
+    }
+    .rc-refresh-btn { font-size: 24px; color: #757575; cursor: pointer; }
+
+    .rc-verify-btn {
+      background: #3b88fd;
+      color: #fff;
+      border: none;
+      padding: 10px 26px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: Roboto, Arial, sans-serif;
+    }
+    .rc-verify-btn:hover { background: #1c72f2; }
+
+    .ttt-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      background: #ddd;
+      padding: 3px;
+    }
+    .ttt-cell {
+      height: 120px;
+      background: #f7f7f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 55px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+    }
+    .ttt-cell.x { color: #3b88fd; }
+    .ttt-cell.o { color: #e53935; }
+
+    .open-box-icon { font-size: 80px; margin-bottom: 18px; filter: drop-shadow(0 0 18px var(--green)); animation: boxBounce 1.4s ease-in-out infinite; }
+    .open-box-title { font-size: clamp(30px, 6vw, 52px); line-height: 1.25; letter-spacing: 2px; color: var(--green); text-shadow: 0 0 20px var(--green), 0 0 45px rgba(0, 255, 136, 0.5); animation: boxGlow 1.8s ease-in-out infinite; }
+    @keyframes boxBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    @keyframes boxGlow { 50% { text-shadow: 0 0 10px var(--green), 0 0 22px rgba(0, 255, 136, 0.3); } }
+
+    .unlock-bar { width: min(420px, 80%); height: 10px; margin: 18px auto; border: 1px solid var(--cyan); border-radius: 6px; overflow: hidden; }
+    #unlock-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--green)); transition: width 0.5s linear; }
+    .unlock-log { max-width: 420px; min-height: 110px; margin: 0 auto; text-align: left; font-size: 15px; line-height: 1.9; color: #8fe9c4; }
+    #unlock-ring { animation: pulse 0.6s infinite; }
+    #unlock-ring.opened { border-color: var(--green); box-shadow: 0 0 50px var(--green); animation: none; }
+    .kp-locked { margin: 4px 0 16px; padding: 18px; text-align: center; border: 1px dashed var(--red); color: var(--red); letter-spacing: 2px; font-size: 16px; background: rgba(255, 23, 68, 0.07); animation: pulse 1.6s infinite; }
+    .kp-locked small { display: block; margin-top: 8px; letter-spacing: 1px; font-size: 15px; color: #f0c4cc; }
+    .keypad-stage { position: relative; overflow: hidden; transition: opacity 0.6s, filter 0.6s, box-shadow 0.6s; }
+    .kp-locked.granted { border-color: var(--green); color: var(--green); background: rgba(0, 255, 136, 0.09); animation: none; }
+    .kp-powerup { box-shadow: 0 0 30px rgba(0, 255, 136, 0.5); }
+    .kp-powerup::after { content: ''; position: absolute; left: 0; right: 0; top: -40px; height: 40px; background: linear-gradient(180deg, rgba(0,255,136,0), rgba(0,255,136,0.45), rgba(0,255,136,0)); animation: kpSweep 1.2s ease-in-out 1; }
+    @keyframes kpSweep { to { top: 100%; } }
+    .kp-reveal { animation: kpReveal 0.8s ease-out; }
+    @keyframes kpReveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .kp-disabled { opacity: 0.3; filter: grayscale(0.8); }
+    /* --- FULL-SCREEN TRANSITION ANIMATIONS --- */
+    #fx-overlay { position: fixed; inset: 0; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(2, 8, 14, 0.94); pointer-events: none; text-align: center; }
+    #fx-overlay.show { display: flex; animation: fxIn 0.3s ease-out; }
+    @keyframes fxIn { from { opacity: 0; } to { opacity: 1; } }
+    .fx-title { margin-top: 22px; font-size: clamp(24px, 5vw, 44px); letter-spacing: 2px; font-weight: bold; animation: fxRise 0.6s ease-out 0.3s both; }
+    .fx-sub { margin-top: 10px; font-size: 16px; letter-spacing: 2px; color: #d6e2f1; animation: fxRise 0.6s ease-out 0.6s both; }
+    @keyframes fxRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .fx-captcha .fx-title, .fx-keypad .fx-title { color: var(--green); text-shadow: 0 0 18px var(--green); }
+    .fx-joystick .fx-title { color: var(--cyan); text-shadow: 0 0 18px var(--cyan); }
+    .fx-check { position: relative; width: 150px; height: 150px; }
+    .fx-check svg { width: 100%; height: 100%; fill: none; stroke: var(--green); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 10px var(--green)); }
+    .fx-check circle { stroke-dasharray: 277; stroke-dashoffset: 277; animation: fxDraw 0.7s ease-out forwards; }
+    .fx-check path { stroke-dasharray: 80; stroke-dashoffset: 80; animation: fxDraw 0.5s ease-out 0.6s forwards; }
+    @keyframes fxDraw { to { stroke-dashoffset: 0; } }
+    .fx-check i { position: absolute; inset: 0; border: 2px solid var(--green); border-radius: 50%; opacity: 0; animation: fxRing 1.6s ease-out 1s infinite; }
+    .fx-check i + i { animation-delay: 1.3s; }
+    @keyframes fxRing { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.6); opacity: 0; } }
+    .fx-cctv .fx-title { color: var(--red); text-shadow: 0 0 18px var(--red); }
+    .fx-cam { position: relative; width: 200px; height: 140px; border: 2px solid var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #050a0e; }
+    .fx-cam::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 4px); animation: fxNoise 0.15s steps(2) infinite; }
+    .fx-cam::after { content: ''; position: absolute; left: 0; right: 0; height: 30px; top: -30px; background: linear-gradient(rgba(255,0,60,0), rgba(255,0,60,0.35), rgba(255,0,60,0)); animation: fxCamScan 1.4s linear infinite; }
+    .fx-lens { font-size: 64px; animation: fxFocus 1.6s ease-in-out infinite; }
+    .fx-rec { position: absolute; top: 8px; left: 10px; font-size: 15px; color: var(--red); animation: kpBlink 1s infinite; }
+    @keyframes fxNoise { to { transform: translateY(4px); } }
+    @keyframes fxFocus { 0%, 100% { transform: scale(1); filter: blur(2px); } 50% { transform: scale(1.15); filter: blur(0); } }
+    @keyframes fxCamScan { to { top: 100%; } }
+    .fx-crt { position: fixed; left: 0; right: 0; top: 50%; height: 100%; background: #fff; transform: translateY(-50%) scaleY(0.005); animation: fxCrt 0.5s ease-out forwards; }
+    @keyframes fxCrt { 0% { transform: translateY(-50%) scaleY(0.005); opacity: 1; } 60% { transform: translateY(-50%) scaleY(1); opacity: 0.9; } 100% { transform: translateY(-50%) scaleY(1); opacity: 0; } }
+    .fx-pad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 8px; }
+    .fx-pad b, .fx-pad u { display: flex; align-items: center; justify-content: center; font-size: 30px; border: 2px solid #24506a; border-radius: 10px; color: #6fa8c8; text-decoration: none; transition: all 0.1s; }
+    .fx-pad b.on { color: #fff; border-color: var(--cyan); background: rgba(0, 229, 255, 0.35); box-shadow: 0 0 22px var(--cyan); }
+    .fx-pad u.locked { color: var(--green); border-color: var(--green); background: rgba(0, 255, 136, 0.2); box-shadow: 0 0 26px var(--green); }
+    .fx-pad [data-d="UP"] { grid-area: 1 / 2; } .fx-pad [data-d="LEFT"] { grid-area: 2 / 1; } .fx-pad u { grid-area: 2 / 2; }
+    .fx-pad [data-d="RIGHT"] { grid-area: 2 / 3; } .fx-pad [data-d="DOWN"] { grid-area: 3 / 2; }
+    .fx-lock { font-size: 90px; }
+    .fx-lock.open { animation: fxPop 0.6s ease-out forwards; }
+    @keyframes fxPop { 0% { transform: scale(1); } 40% { transform: scale(1.5) rotate(-8deg); } 100% { transform: scale(1.15); } }
+    .fx-code { display: flex; gap: 12px; margin-top: 20px; }
+    .fx-code span { width: 56px; height: 68px; display: flex; align-items: center; justify-content: center; font-size: 38px; color: var(--green); border: 2px solid #1d5a43; border-radius: 8px; background: rgba(0, 255, 136, 0.06); }
+    .fx-code span.on { border-color: var(--green); box-shadow: 0 0 18px var(--green); }
+    .fx-flash { position: fixed; inset: 0; background: #fff; opacity: 0; animation: fxFlash 0.6s ease-out forwards; }
+    @keyframes fxFlash { 0% { opacity: 0; } 30% { opacity: 0.9; } 100% { opacity: 0; } }
+
+    /* --- GAME TIMER + EASY RIDDLE CHOICES --- */
+    body { font-size: 17px; line-height: 1.5; }
+    header { position: relative; flex-wrap: wrap; }
+    #game-timer { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; min-width: 180px; padding: 6px 22px; border: 2px solid var(--cyan); border-radius: 10px; background: rgba(0, 0, 0, 0.6); }
+    #game-timer .t-label { font-size: 16px; color: #cfe8f5; letter-spacing: 1px; }
+    #game-timer .t-digits { font-size: 36px; font-weight: bold; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    #game-timer.low { border-color: var(--red); }
+    #game-timer.low .t-digits { color: #ff8095; animation: pulse 1s infinite; }
+    #game-timer.expired { border-color: var(--red); }
+    #game-timer.expired .t-digits, #game-timer.expired .t-label { color: var(--red); animation: kpBlink 0.8s infinite; }
+    #game-timer.stopped { border-color: var(--green); }
+    #game-timer.stopped .t-digits, #game-timer.stopped .t-label { color: var(--green); }
+    #timer-pen { position: absolute; left: 50%; top: 100%; color: var(--red); font-weight: bold; font-size: 24px; opacity: 0; pointer-events: none; }
+    #timer-pen.show { animation: penFloat 1.4s ease-out; }
+    @keyframes penFloat { 0% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, 30px); } }
+    @media (max-width: 900px) { #game-timer { position: static; transform: none; order: 3; width: 100%; } }
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+    .choice-btn { padding: 18px 16px; font-size: 20px; font-weight: bold; text-align: left; color: #fff; background: rgba(0, 229, 255, 0.1); border: 2px solid var(--cyan); border-radius: 10px; cursor: pointer; line-height: 1.3; }
+    .choice-btn:hover:not(:disabled) { background: rgba(0, 229, 255, 0.28); }
+    .choice-btn .choice-key { display: inline-block; width: 34px; height: 34px; line-height: 34px; text-align: center; border-radius: 50%; background: var(--cyan); color: #000; margin-right: 12px; }
+    .choice-btn.wrong { border-color: var(--red); background: rgba(255, 23, 68, 0.2); color: #ffb3bf; animation: rcShake 0.35s; }
+    .choice-btn.right { border-color: var(--green); background: rgba(0, 255, 136, 0.25); }
+    .choice-btn:disabled { cursor: not-allowed; }
+    @media (max-width: 600px) { .choice-grid { grid-template-columns: 1fr; } }
+
+    /* --- KNOCK + KEYPAD STAGE LAYOUTS --- */
+    .stage-pills { display: flex; gap: 8px; margin: 12px 0 18px; flex-wrap: wrap; }
+    .stage-pills .pill { flex: 1; min-width: 150px; padding: 8px 10px; font-size: 15px; letter-spacing: 1px; text-align: center; border: 1px solid #2a3b52; color: #9db8d6; border-radius: 4px; background: rgba(10, 20, 34, 0.6); }
+    .stage-pills .pill.done { color: var(--green); border-color: var(--green); background: rgba(0, 255, 136, 0.08); }
+    .stage-pills .pill.live { color: var(--amber); border-color: var(--amber); background: rgba(255, 183, 3, 0.1); animation: pulse 1.5s infinite; }
+    .knock-stage { position: relative; height: 230px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255, 183, 3, 0.35); border-radius: 6px; background: radial-gradient(circle at center, rgba(255, 183, 3, 0.08), rgba(0, 0, 0, 0.4)); overflow: hidden; }
+    .knock-rings { position: absolute; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+    .knock-rings span { position: absolute; inset: 0; border: 2px solid var(--amber); border-radius: 50%; opacity: 0; animation: knockRing 2.4s ease-out infinite; }
+    .knock-rings span:nth-child(2) { animation-delay: 0.8s; }
+    .knock-rings span:nth-child(3) { animation-delay: 1.6s; }
+    @keyframes knockRing { 0% { transform: scale(0.5); opacity: 0.9; } 100% { transform: scale(3.2); opacity: 0; } }
+    .knock-core { font-size: 46px; filter: drop-shadow(0 0 12px var(--amber)); animation: knockThump 1.2s ease-in-out infinite; }
+    @keyframes knockThump { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.25); } 30% { transform: scale(1); } 45% { transform: scale(1.15); } }
+    .knock-wave { position: absolute; left: 0; right: 0; bottom: 0; height: 90px; display: flex; align-items: flex-end; justify-content: center; gap: 5px; padding: 0 14px; opacity: 0.75; }
+    .knock-wave span { flex: 1; max-width: 14px; background: linear-gradient(to top, var(--amber), rgba(255, 183, 3, 0.1)); border-radius: 2px 2px 0 0; animation: knockBar 1s ease-in-out infinite; }
+    @keyframes knockBar { 0%, 100% { height: 8%; } 50% { height: 100%; } }
+    .knock-status { margin: 14px 0; font-size: 15px; letter-spacing: 2px; color: #d6e2f1; text-align: center; }
+    .knock-status b { color: var(--amber); }
+    .rhythm-quote { margin-top: 6px; padding: 16px 20px; border-left: 4px solid var(--amber); background: rgba(255, 183, 3, 0.07); color: #ffe4a0; font-style: italic; line-height: 1.7; font-size: 17px; }
+    .keypad-stage { display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap; padding: 22px; border: 1px solid rgba(0, 255, 136, 0.35); border-radius: 6px; background: radial-gradient(circle at 30% 50%, rgba(0, 255, 136, 0.08), rgba(0, 0, 0, 0.4)); }
+    .kp-grid { display: grid; grid-template-columns: repeat(4, 52px); gap: 8px; }
+    .kp-grid span { height: 52px; display: flex; align-items: center; justify-content: center; border: 1px solid #1d5a43; border-radius: 6px; color: #6fcf9f; font-size: 18px; background: rgba(0, 255, 136, 0.04); transition: all 0.15s; }
+    .kp-grid span.lit { color: #eafff6; border-color: var(--green); background: rgba(0, 255, 136, 0.28); box-shadow: 0 0 14px var(--green); }
+    .kp-terminal { min-width: 230px; padding: 16px 18px; border: 1px solid #1d5a43; border-radius: 6px; background: rgba(0, 0, 0, 0.45); }
+    .kp-label { font-size: 15px; letter-spacing: 2px; color: #a8f0d2; }
+    .kp-slots { display: flex; gap: 10px; margin: 10px 0 14px; }
+    .kp-slots span { width: 42px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--green); border-bottom: 3px solid var(--green); animation: kpBlink 1.2s infinite; }
+    @keyframes kpBlink { 50% { opacity: 0.35; } }
+    .kp-row { font-size: 15px; letter-spacing: 1px; color: #d6e2f1; margin-top: 6px; }
+    .kp-row b { color: var(--amber); }
+
+    /* --- reCAPTCHA UPGRADE: traffic lights / text / slide puzzle --- */
+    .rc-challenge-modal * { font-family: Roboto, Arial, sans-serif; }
+    .rc-header { position: relative; }
+    .rc-step { position: absolute; top: 16px; right: 20px; font-size: 12px; opacity: 0.85; }
+    .rc-error { display: none; margin: 6px; padding: 8px 12px; font-size: 13px; color: #d93025; background: #fdecea; border-radius: 2px; }
+    .rc-error.show { display: block; }
+    .rc-shake { animation: rcShake 0.35s; }
+    @keyframes rcShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+    .photo-tile canvas { width: 100%; height: auto; display: block; }
+    #tl-grid .photo-tile { background: #fff; border-color: transparent !important; }
+    #tl-grid .photo-tile.selected { transform: none; }
+    #tl-grid .photo-tile canvas { transition: transform 0.12s, opacity 0.2s; }
+    #tl-grid .photo-tile.tl-fade canvas { opacity: 0; }
+    #tl-grid .photo-tile.selected canvas { transform: scale(0.74); }
+    .tl-sub { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; animation: tlSplit 0.2s ease-out; }
+    @keyframes tlSplit { from { transform: scale(1.12); opacity: 0.6; } to { transform: none; opacity: 1; } }
+    .tl-sub .tl-sub { animation-duration: 0.15s; }
+    .tl-sub .tl-sub .photo-tile.selected::after { width: 12px; height: 12px; line-height: 12px; font-size: 9px; top: 1px; left: 1px; }
+    .rc-verify-btn:disabled, .rc-verify-btn:disabled:hover { background: #a8c5f5; cursor: not-allowed; }
+    .rc-text-wrap { padding: 12px; }
+    .rc-text-img { position: relative; border: 1px solid #ddd; line-height: 0; overflow: hidden; }
+    .rc-text-img canvas { width: 100%; height: auto; display: block; }
+    .rc-icon-btn { position: absolute; bottom: 6px; width: 32px; height: 32px; border: none; border-radius: 50%; background: rgba(255,255,255,0.9); box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer; font-size: 16px; line-height: 32px; }
+    .rc-challenge-modal .rc-text-input { width: 100%; margin-top: 12px; padding: 12px 14px; font-size: 18px; letter-spacing: 3px; color: #222; background: #fff; border: 1px solid #ccc; border-radius: 2px; text-transform: uppercase; }
+    .pz-stage { position: relative; line-height: 0; overflow: hidden; user-select: none; }
+    .pz-stage canvas.pz-bg { width: 100%; height: auto; display: block; }
+    .pz-piece { position: absolute; filter: drop-shadow(0 0 3px rgba(0,0,0,0.7)); pointer-events: none; }
+    .pz-track { position: relative; height: 46px; margin: 12px 6px 6px; background: #f1f3f4; border: 1px solid #dadce0; border-radius: 23px; touch-action: none; user-select: none; }
+    .pz-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #d2e3fc; border-radius: 23px; }
+    .pz-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #70757a; pointer-events: none; }
+    .pz-handle { position: absolute; left: 0; top: -1px; width: 52px; height: 46px; border-radius: 23px; background: #3b88fd; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: grab; touch-action: none; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+    .pz-anim .pz-handle, .pz-anim .pz-fill, .pz-anim .pz-piece { transition: left 0.3s, width 0.3s; }
+    .pz-ok .pz-handle { background: #0f9d58; }
+
+    /* ========================================================
+       HORROR CCTV SURVEILLANCE STYLING (FROM TEST.PY DESIGN)
+       ======================================================== */
+    .cctv-stage-wrapper {
+      position: relative;
+      width: 100%;
+      height: 520px;
+      background: #000;
+      border: 3px solid #ff0000;
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 0 35px rgba(255, 0, 0, 0.4);
+    }
+
+    /* Video / Room Canvas */
+    #cctv-cam-feed, #cctv-room-img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: grayscale(80%) contrast(150%) brightness(0.85);
+      position: absolute;
+      top: 0; left: 0;
+    }
+
+    /* Night-Vision Green/Blue Tint */
+    .cctv-tint {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 45, 30, 0.35);
+      mix-blend-mode: color;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Static Glitch Canvas */
+    canvas#cctv-glitch-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0.25;
+    }
+
+    /* CCTV HUD Overlay (from test.py) */
+    .cctv-hud-layer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 10;
+      padding: 15px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 17px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+    .cam-label { color: #ffffff; text-shadow: 0 0 6px #000; }
+    .rec-indicator { color: #ff0000; display: flex; align-items: center; gap: 8px; }
+    .rec-dot { width: 12px; height: 12px; background: #ff0000; border-radius: 50%; animation: pulse 1s infinite; }
+
+    .hud-center-alert {
+      text-align: center;
+      color: #ff0000;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 15px #ff0000, 0 0 5px #000;
+      animation: alertBlink 0.6s infinite alternate;
+      display: none;
+    }
+    @keyframes alertBlink { 0% { opacity: 0.1; } 100% { opacity: 1; } }
+
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      color: #ffffff;
+      font-size: 15px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 4px #000;
+    }
+
+    /* THE GHOST ENTITY & TARGETING RETICLE (FROM TEST.PY) */
+    #ghost-entity-container {
+      display: none;
+      position: absolute;
+      width: 170px;
+      height: 170px;
+      z-index: 8;
+      transition: all 0.35s ease-out;
+    }
+
+    #ghost-img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(-3px 0 0 rgba(255, 0, 60, 0.8)) drop-shadow(3px 0 0 rgba(0, 255, 255, 0.8)) drop-shadow(0 0 14px rgba(0, 255, 160, 0.6));
+      animation: ghostShiver 0.1s infinite;
+    }
+    @keyframes ghostShiver {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-2px, 3px) scale(1.04); }
+      100% { transform: translate(2px, -2px) scale(0.97); }
+    }
+
+    /* Sci-Fi Target Reticle Brackets (Matches test.py) */
+    .reticle-bracket {
+      position: absolute;
+      width: 25px; height: 25px;
+      border: 3px solid #ff0000;
+    }
+    .ret-tl { top: -8px; left: -8px; border-right: none; border-bottom: none; }
+    .ret-tr { top: -8px; right: -8px; border-left: none; border-bottom: none; }
+    .ret-bl { bottom: -8px; left: -8px; border-right: none; border-top: none; }
+    .ret-br { bottom: -8px; right: -8px; border-left: none; border-top: none; }
+
+    /* Telemetry on Right Side of Ghost */
+    .reticle-telemetry {
+      position: absolute;
+      left: 185px; top: 10px;
+      width: 160px;
+      color: #ff0000;
+      font-size: 15px;
+      letter-spacing: 1px;
+      line-height: 1.4;
+      text-shadow: 0 0 6px #ff0000;
+    }
+
+    .virus-scan { position: absolute; left: 0; right: 0; top: -60px; height: 60px; z-index: 6; pointer-events: none;
+      background: linear-gradient(180deg, rgba(0,255,150,0), rgba(0,255,150,0.18), rgba(0,255,150,0)); animation: virusScan 4s linear infinite; }
+    @keyframes virusScan { to { top: 100%; } }
+    #virus-warning { position: absolute; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; animation: warnFlash 0.25s steps(2) infinite; }
+    #virus-warning.show { display: flex; }
+    #virus-warning .warn-line { color: #ff1744; font-size: clamp(24px, 5vw, 46px); font-weight: bold; letter-spacing: 2px; text-align: center; text-shadow: -3px 0 #00ffff, 3px 0 #ff00aa, 0 0 22px #ff0000; animation: warnGlitch 0.18s steps(2) infinite; }
+    #virus-warning .warn-sub { margin-top: 12px; color: #00ffa6; font-size: 15px; letter-spacing: 2px; text-shadow: 0 0 6px #00ffa6; }
+    @keyframes warnFlash { 0% { background: rgba(90, 0, 12, 0.65); } 50% { background: rgba(0, 0, 0, 0.35); } }
+    @keyframes warnGlitch {
+      0% { transform: translate(0, 0) skewX(0); clip-path: none; }
+      25% { transform: translate(-6px, 2px) skewX(8deg); }
+      50% { transform: translate(5px, -3px) skewX(-6deg); clip-path: inset(0 0 40% 0); }
+      75% { transform: translate(-3px, 0); clip-path: inset(30% 0 0 0); }
+      100% { transform: none; clip-path: none; }
+    }
+    .reticle-telemetry { color: #00ffa6; text-shadow: 0 0 6px #00ffa6; }
+    .ghost-right .reticle-telemetry { left: auto; right: 185px; text-align: right; }
+
+    /* Clue Banner under CCTV */
+    .cctv-clue-bar {
+      margin-top: 15px;
+      background: rgba(20, 5, 5, 0.85);
+      border: 1px solid var(--red);
+      padding: 12px 18px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* --- PUZZLE STATUS HUB --- */
+    .status-hub {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .puzzle-node {
+      background: #09121f;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+    .puzzle-node.active-puzzle {
+      border-color: var(--amber);
+      box-shadow: 0 0 15px rgba(255, 183, 3, 0.2);
+    }
+    .puzzle-node.solved-puzzle {
+      border-color: var(--green);
+      background: rgba(0, 255, 136, 0.05);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    }
+
+    .node-info h4 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+    .node-info p { font-size: 15px; color: #8da4be; }
+
+    .node-badge {
+      font-size: 15px;
+      font-weight: bold;
+      padding: 6px 14px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .badge-locked { background: #162438; color: #9db8d6; }
+    .badge-active { background: rgba(255, 183, 3, 0.2); color: var(--amber); border: 1px solid var(--amber); animation: pulse 1.5s infinite; }
+    .badge-solved { background: rgba(0, 255, 136, 0.2); color: var(--green); border: 1px solid var(--green); }
+
+    .quote-banner {
+      background: rgba(0, 243, 255, 0.06);
+      border-left: 4px solid var(--cyan);
+      padding: 16px 20px;
+      border-radius: 4px;
+      font-style: italic;
+      color: #e0f2fe;
+      margin: 15px 0;
+      line-height: 1.5;
+    }
+
+    /* GM Controls */
+    #gm-drawer {
+      position: fixed;
+      bottom: 10px; right: 10px;
+      background: rgba(8, 14, 24, 0.95);
+      border: 1px solid #1c3252;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 15px;
+      z-index: 2000;
+    }
+    #gm-drawer button {
+      font-size: 15px; padding: 4px 8px; margin-left: 4px;
+      background: #183354; color: #fff; border: none; cursor: pointer; border-radius: 3px;
+    }
+    #gm-drawer button:hover { background: var(--cyan); color: #000; }
+    #gm-drawer { display: none; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 95vw; }
+    #gm-drawer.open { display: flex; }
+    #gm-drawer { z-index: 8000; }
+    .alice-meaning { font-size: 14px; letter-spacing: 1px; color: #9fc3e6; margin-top: 2px; }
+    .start-meaning { font-size: clamp(16px, 2.4vw, 24px); letter-spacing: 3px; color: #cfe8f5; text-align: center; padding: 0 20px; margin-top: -6px; }
+    #riddle-counter { font-size: 16px; color: #cfe8f5; letter-spacing: 1px; margin: 4px 0 0 0; }
+    #status-board { flex-basis: 100%; display: grid; gap: 4px; }
+    .sb-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 4px; font-size: 15px; background: #0a1626; border-left: 5px solid #556; }
+    .sb-row b { text-align: right; }
+    .sb-done { border-left-color: #00e676; } .sb-done b { color: #00e676; }
+    .sb-act { border-left-color: #ffd54a; } .sb-act b { color: #ffd54a; }
+    .sb-wait { border-left-color: #6b7a90; } .sb-wait b { color: #aab6c6; }
+    .sb-bad { border-left-color: #ff1744; } .sb-bad b { color: #ff6b81; }
+    .sb-warn { border-left-color: #ff9100; } .sb-warn b { color: #ffb74d; }
+    .sb-notice { padding: 6px 10px; color: #ffb74d; font-size: 14px; }
+    #hub-log { flex-basis: 100%; margin: 0; padding: 8px 10px; max-height: 190px; overflow: auto; white-space: pre-wrap; background: #02070d; color: #9fffe0; border: 1px solid #1c3252; border-radius: 4px; font: 14px Consolas, monospace; }
+    #usb-dot { z-index: 8000; }
+    /* --- START SCREEN, BRIEFING VIDEO, "GAME WILL START" PROMPT --- */
+    #start-screen { position: fixed; inset: 0; z-index: 7000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: radial-gradient(circle at center, #0b2233 0%, #02070d 70%); }
+    .start-title { font-size: clamp(56px, 12vw, 120px); font-weight: bold; letter-spacing: 12px; color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
+    .start-sub { font-size: 18px; letter-spacing: 3px; color: #ff6b81; margin-bottom: 30px; }
+    #start-btn { padding: 24px 64px; font-size: 30px; font-weight: bold; letter-spacing: 3px; color: #fff; background: rgba(0, 229, 255, 0.12); border: 3px solid var(--cyan); border-radius: 12px; cursor: pointer; animation: pulse 1.6s infinite; }
+    #start-btn:hover { background: var(--cyan); color: #000; }
+    #briefing-overlay { position: fixed; inset: 0; z-index: 7100; display: none; background: #000; align-items: center; justify-content: center; }
+    #briefing-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    #briefing-error { position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: #ff6b81; font-size: 22px; padding: 0 30px; }
+    #briefing-skip { position: absolute; right: 20px; bottom: 20px; display: none; padding: 10px 18px; font-size: 16px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer; }
+    #game-start-prompt { position: fixed; inset: 0; z-index: 7200; display: none; align-items: center; justify-content: center; background: #000; }
+    .gsp-text { font-size: clamp(30px, 6vw, 64px); font-weight: bold; color: var(--cyan); text-shadow: 0 0 25px var(--cyan); text-align: center; animation: fxRise 0.8s ease-out both; }
+    .gsp-dots { animation: kpBlink 0.9s infinite; }
+    #gm-tests { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    .usb-on { color: #00e676; font-weight: bold; }
+    .usb-off { color: #ff5470; font-weight: bold; }
+    #usb-dot { position: fixed; left: 8px; bottom: 8px; width: 10px; height: 10px; border-radius: 50%; background: #ff1744; opacity: 0.5; z-index: 900; }
+    #usb-dot.ok { background: #00e676; }
+  </style>
+</head>
+<body>
+
+  <canvas id="neural-bg"></canvas>
+
+  <header>
+    <div class="brand">
+      <div><h1>A.L.I.C.E.</h1><div class="alice-meaning">Artificial Labile Intelligence Cybernated Existence</div></div>
+      <span class="status-badge" id="ai-status">LOCKDOWN PROTOCOL ACTIVE</span>
+    </div>
+    <div id="game-timer"><div class="t-label" id="t-label">TIME LEFT</div><div class="t-digits" id="t-digits">15:00</div><div id="timer-pen">-30s</div></div>
+    <div style="font-size: 16px; color: var(--cyan); letter-spacing: 2px;">
+      NODE: <span id="active-step-lbl">CLEARANCE GATE</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- STAGE 1: ALICE LOCKED SCREEN -->
+    <div class="card screen active" id="screen-locked">
+      <div id="aura-locked-core">
+        <div class="core-ring">
+          <div class="core-glyph">👁️</div>
+        </div>
+        <h2 style="font-size: 26px; color: var(--red); letter-spacing: 2px; margin-bottom: 12px;">
+          SYSTEM ENCRYPTION LOCKED
+        </h2>
+        <p style="font-size: 16px; color: #8eaecf; max-width: 580px; margin: 0 auto 25px auto; line-height: 1.6;">
+          A.L.I.C.E. (Artificial Labile Intelligence Cybernated Existence) has locked this terminal. Retrieve the physical Level-3 Access Keycard and place it on the table receiver to unlock.
+        </p>
+        <div style="display: inline-block; border: 1px dashed var(--cyan); padding: 12px 25px; border-radius: 4px; color: var(--cyan); font-size: 16px;">
+          📡 WAITING FOR RFID AUTHENTICATION SCAN...
+        </div>
+      </div>
+      <div id="aura-unlock-seq" style="display: none; text-align: center; padding: 30px 10px;">
+        <div class="core-ring" id="unlock-ring"><div class="core-glyph" id="unlock-glyph">🔒</div></div>
+        <h2 id="unlock-title" style="font-size: 24px; color: var(--cyan); letter-spacing: 2px; margin: 10px 0;">ALICE AUTHENTICATING...</h2>
+        <div class="unlock-bar"><div id="unlock-fill"></div></div>
+        <div id="unlock-log" class="unlock-log"></div>
+      </div>
+    </div>
+
+    <!-- STAGE 2: RIDDLE PROMPT + AUTHENTIC NOT-A-ROBOT CAPTCHA -->
+    <div class="card screen" id="screen-riddle">
+      <div class="card-title">
+        <span>SECURITY CLEARANCE VERIFICATION</span>
+        <span>STEP 01</span>
+      </div>
+
+      <div id="riddle-box">
+        <p style="font-size: 17px; color: var(--amber); margin-bottom: 10px;">[ INCOMING PROMPT FROM ALICE CORE ]</p>
+        <p id="riddle-counter"></p>
+        <blockquote id="riddle-q" style="font-size: 24px; font-style: italic; border-left: 4px solid var(--cyan); padding-left: 16px; margin: 20px 0; color: #ffffff; line-height: 1.6;"></blockquote>
+        <div id="riddle-choices" class="choice-grid"></div>
+        <div id="riddle-msg" style="margin-top: 15px; font-size: 16px;"></div>
+      </div>
+
+      <!-- Google reCAPTCHA Badge -->
+      <div id="recaptcha-section" style="display: none;">
+        <p style="font-size: 16px; color: #c4def2; text-align: center; margin: 25px 0 10px 0;">
+          Human biological verification required by ALICE safety protocol:
+        </p>
+        <div class="recaptcha-wrapper">
+          <div class="g-recaptcha-badge">
+            <div class="rc-left">
+              <div class="rc-checkbox-container" id="rc-box" onclick="onCheckboxClick()">
+                <div class="rc-spinner" id="rc-spin"></div>
+                <div class="rc-checkmark" id="rc-check"></div>
+              </div>
+              <span class="rc-label">I'm not a robot</span>
+            </div>
+            <div class="rc-right">
+              <svg class="rc-logo-svg" viewBox="0 0 48 48">
+                <path fill="#4285F4" d="M24 4.5c5.38 0 10.25 2.18 13.79 5.71l-4.24 4.24C31.1 11.99 27.73 10.5 24 10.5c-7.46 0-13.5 6.04-13.5 13.5H4.5c0-10.77 8.73-19.5 19.5-19.5z"/>
+                <path fill="#757575" d="M24 43.5c-5.38 0-10.25-2.18-13.79-5.71l4.24-4.24C16.9 36.01 20.27 37.5 24 37.5c7.46 0 13.5-6.04 13.5-13.5h6c0 10.77-8.73 19.5-19.5 19.5z"/>
+                <polygon fill="#4285F4" points="31,7 44,7 44,20"/>
+                <polygon fill="#757575" points="17,41 4,41 4,28"/>
+              </svg>
+              <div class="rc-brand-text">reCAPTCHA</div>
+              <div class="rc-terms-text">Privacy - Terms</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 3: HORROR CCTV SURVEILLANCE FEED (MATCHES HORROR/TEST.PY!) -->
+    <div class="card screen" id="screen-cctv" style="border-color: #ff0000; padding: 20px;">
+      <div class="card-title" style="color: #ff3344; border-color: #4a1520;">
+        <span>ALICE NEURAL FEED // VIRUS SCAN</span>
+        <span id="cctv-countdown-lbl" style="color: var(--amber);">SIGNAL STABILIZING: 5s</span>
+      </div>
+
+      <div class="cctv-stage-wrapper" id="cctv-box">
+        <!-- Live Webcam (or dark room canvas fallback) -->
+        <video id="cctv-cam-feed" autoplay playsinline muted style="display: none;"></video>
+        <div id="cctv-dark-room" style="width: 100%; height: 100%; background: radial-gradient(circle at center, #152233 0%, #03060a 85%); position: absolute; top: 0; left: 0;">
+          <div style="position: absolute; top: 40%; left: 45%; font-size: 50px; opacity: 0.12;">🚪</div>
+        </div>
+
+        <!-- Green/Blue Night Vision Tint -->
+        <div class="cctv-tint"></div>
+        <div class="virus-scan"></div>
+        <div id="virus-warning"><div class="warn-line">⚠ WARNING ⚠</div><div class="warn-line">⚠ WARNING ⚠</div><div class="warn-sub">ROGUE AI VIRUS BREACH IN PROGRESS</div></div>
+
+        <!-- VHS Glitch Noise Overlay -->
+        <canvas id="cctv-glitch-canvas"></canvas>
+
+        <!-- CCTV HUD -->
+        <div class="cctv-hud-layer">
+          <div class="hud-top">
+            <span class="cam-label">NODE_04: ALICE CORE // INFECTED</span>
+            <span class="rec-indicator"><span class="rec-dot"></span>RECORDING</span>
+          </div>
+
+          <div class="hud-center-alert" id="hud-alert-txt">
+            /!\ ALERT: ROGUE AI VIRUS DETECTED /!\
+          </div>
+
+          <div class="hud-bottom">
+            <span id="cctv-timestamp-1">10-14-2026 10:14:00</span>
+            <span id="cctv-timestamp-2">VIRUS.ALICE // BREACH LV4</span>
+          </div>
+        </div>
+
+        <!-- THE GHOST FROM HORROR FOLDER + SCI-FI TARGETING RETICLE -->
+        <div id="ghost-entity-container">
+          <img id="ghost-img" src="images/ghost.png" alt="Entity Apparition">
+          <!-- Brackets -->
+          <div class="reticle-bracket ret-tl"></div>
+          <div class="reticle-bracket ret-tr"></div>
+          <div class="reticle-bracket ret-bl"></div>
+          <div class="reticle-bracket ret-br"></div>
+          <!-- Stats (No direction spoilers!) -->
+          <div class="reticle-telemetry">
+            <div>CORRUPTION: <span style="font-weight:bold;">CRITICAL</span></div>
+            <div style="margin-top: 4px;">THREAT LEVEL: <span id="emf-val" style="font-weight:bold;">98.7%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAGE 4: PUZZLE HUB -->
+    <div class="card screen" id="screen-hub">
+      <div class="card-title">
+        <span>ALICE SYSTEM OVERRIDE CONSOLE</span>
+        <span id="hub-progress-txt" style="color: var(--amber);">1 OF 3 PUZZLES SOLVED</span>
+      </div>
+
+      <div class="status-hub">
+
+        <!-- PUZZLE 1: DIRECTIONAL JOYSTICK -->
+        <div class="puzzle-node solved-puzzle" id="node-directional">
+          <div class="node-info">
+            <h4>🕹️ DIRECTIONAL VECTOR ROUTING</h4>
+            <p>Compute flow redirected away from neural processor.</p>
+          </div>
+          <div class="node-badge badge-solved" id="badge-dir">SOLVED ✓</div>
+        </div>
+
+        <!-- PUZZLE 2: KNOCKING PUZZLE -->
+        <div class="puzzle-node active-puzzle" id="node-knock">
+          <div class="node-info">
+            <h4>🔊 ACOUSTIC RESONANCE CALIBRATION</h4>
+            <p id="knock-desc">Awaiting acoustic sensor calibration. Listen to the chamber's pulse.</p>
+          </div>
+          <div class="node-badge badge-active" id="badge-knock">ACTIVE</div>
+        </div>
+
+        <!-- CLUE QUOTE FOR KNOCK PUZZLE -->
+        <div class="quote-banner" id="knock-hint-quote">
+          "The entity responds only to the rhythm of physical resonance.<br>
+          Listen closely to the chamber's pulse — then strike the containment board in harmony with the signal."
+        </div>
+
+        <!-- PUZZLE 3: KEYPAD MEMBRANE -->
+        <div class="puzzle-node" id="node-keypad">
+          <div class="node-info">
+            <h4>🔢 CONTAINMENT OVERRIDE KEYPAD</h4>
+            <p id="keypad-desc">Final authorization terminal (Maglock Release).</p>
+          </div>
+          <div class="node-badge badge-locked" id="badge-keypad">LOCKED</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STAGE 4: KNOCKING PUZZLE -->
+    <div class="card screen" id="screen-knock">
+      <div class="card-title">
+        <span>🔊 ACOUSTIC RESONANCE CALIBRATION</span>
+        <span style="color: var(--amber);">STAGE 1 OF 3</span>
+      </div>
+      <div class="stage-pills">
+        <div class="pill live">① ACOUSTIC CALIBRATION</div>
+        <div class="pill">② VECTOR ROUTING</div>
+        <div class="pill">③ OVERRIDE KEYPAD</div>
+      </div>
+      <div class="knock-stage">
+        <div class="knock-rings"><span></span><span></span><span></span><div class="knock-core">✊</div></div>
+        <div class="knock-wave" id="knock-wave"></div>
+      </div>
+      <div class="knock-status">SENSOR ARRAY: <b>LISTENING...</b> &nbsp;|&nbsp; TAP PATTERN: <b>AWAITING INPUT</b></div>
+      <div class="rhythm-quote">
+        "The entity responds only to the rhythm of physical resonance.<br>
+        Listen closely to the chamber's pulse — then strike the containment board in harmony with the signal."
+      </div>
+    </div>
+
+    <!-- STAGE 5: KEYPAD PUZZLE -->
+    <div class="card screen" id="screen-keypad">
+      <div class="card-title">
+        <span>🔢 CONTAINMENT OVERRIDE KEYPAD</span>
+        <span style="color: var(--amber);">STAGE 3 OF 3</span>
+      </div>
+      <div class="stage-pills">
+        <div class="pill done">① ACOUSTIC CALIBRATION ✓</div>
+        <div class="pill done">② VECTOR ROUTING ✓</div>
+        <div class="pill live">③ OVERRIDE KEYPAD</div>
+      </div>
+      <div class="kp-locked" id="kp-locked-msg">🔒 KEYPAD MEMBRANE LOCKED<small>Vector routing verified. Scan the RFID card again to activate the keypad.</small></div>
+      <div class="keypad-stage kp-disabled" id="kp-stage">
+        <div class="kp-grid" id="kp-grid"></div>
+        <div class="kp-terminal">
+          <div class="kp-label">FINAL OVERRIDE CODE</div>
+          <div class="kp-slots"><span>_</span><span>_</span><span>_</span><span>_</span></div>
+          <div class="kp-row">MAGLOCK: <b>🔒 ENGAGED</b></div>
+          <div class="kp-row">INPUT: <b>PHYSICAL KEYPAD MEMBRANE</b></div>
+        </div>
+      </div>
+      <div class="rhythm-quote" id="kp-clues" style="display: none; margin-top: 16px;">
+        <b style="font-style: normal;">Solve the trace paths using the keypad matrix:</b><br>
+        1. Fourth letter of the alphabet<br>
+        2. Artificial Intelligence starts with the letter _<br>
+        3. Start from 0. UP to the end, LEFT, 2 DOWN, 1 RIGHT<br>
+        4. Start from upper left. 1 DOWN, 3 RIGHT, 1 DOWN, 2 LEFT, 1 UP, 1 LEFT<br>
+        5. Lock in sequence: #
+      </div>
+    </div>
+
+    <!-- STAGE 5: ALL SOLVED / MAGLOCK UNLOCKED -->
+    <div class="card screen" id="screen-victory" style="border-color: var(--green); text-align: center; padding: 50px 20px;">
+      <div class="open-box-icon">📦</div>
+      <h2 class="open-box-title">YOU MAY NOW<br>OPEN THE BOX</h2>
+    </div>
+
+  </main>
+
+  <!-- AUTHENTIC NEAL.FUN reCAPTCHA MODAL (USING EXACT PHOTOS) -->
+  <div class="rc-modal-overlay" id="rc-modal">
+    <div class="rc-challenge-modal" id="rc-modal-card">
+      <div class="rc-header" id="rc-header-box">
+        <div class="rc-step" id="rc-step">1 / 3</div>
+        <div class="rc-header-sub" id="rc-sub">Select all the squares with a</div>
+        <div class="rc-header-target" id="rc-title">Traffic Lights</div>
+        <div class="rc-header-sub" id="rc-note" style="font-size: 14px;"></div>
+      </div>
+      <div class="rc-body" id="rc-content"></div>
+      <div class="rc-error" id="rc-error"></div>
+      <div class="rc-footer" id="rc-footer-box">
+        <div class="rc-refresh-btn" onclick="reloadChallenge()">↺</div>
+        <button class="rc-verify-btn" id="rc-verify-btn" onclick="verifyCurrentStage()">Verify</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="start-screen">
+    <div class="start-title">A.L.I.C.E.</div>
+    <div class="start-meaning">Artificial Labile Intelligence Cybernated Existence</div>
+    <div class="start-sub">SYSTEM LOCKDOWN PROTOCOL ACTIVE</div>
+    <button id="start-btn" onclick="startEscapeRoom()">START ESCAPE ROOM</button>
+  </div>
+  <div id="briefing-overlay">
+    <video id="briefing-video" playsinline disablepictureinpicture></video>
+    <div id="briefing-error"></div>
+    <button id="briefing-skip" onclick="finishBriefing()">Skip ▶</button>
+  </div>
+  <div id="game-start-prompt"><div class="gsp-text">The Game Will Start<span class="gsp-dots">...</span></div></div>
+
+  <div id="fx-overlay"></div>
+
+  <!-- GAME MASTER CONTROL DRAWER -->
+  <div id="gm-drawer">
+    <strong>ORGANIZER</strong>
+    <span id="usb-status" class="usb-off">● USB: NOT CONNECTED</span>
+    <button onclick="connectESP32Serial()" id="btn-serial" style="background:#00bcd4; color:#000; font-weight:bold;">🔌 Connect to USB</button>
+    <button onclick="resetGame()" style="background:#ff1744; color:#fff; font-weight:bold;">🔄 RESET GAME</button>
+    <span id="gm-tests">
+      <strong>TEST:</strong>
+      <button onclick="startAuraUnlock()">1. RFID Scan #1</button>
+      <button onclick="gmSkipCaptcha()">2. Skip Captcha</button>
+      <button onclick="solveKnock(true)">3. Tap Solved</button>
+      <button onclick="solveJoystick(true)">4. Joystick Solved</button>
+      <button onclick="activateKeypad()">5. RFID Scan #2</button>
+      <button onclick="solveKeypad()">6. Keypad Solved</button>
+    </span>
+    <div id="status-board"></div>
+    <pre id="hub-log"></pre>
+    <button onclick="toggleOrganizer()">✕ Close</button>
+  </div>
+  <div id="usb-dot"></div>
+
+  <script>
+    // --- SYNTHESIZED WEB AUDIO (OFFLINE) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 600, duration = 0.1, type = 'sine') {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+    function playChime() {
+      playBeep(440, 0.12);
+      setTimeout(() => playBeep(554, 0.12), 100);
+      setTimeout(() => playBeep(659, 0.2), 200);
+    }
+    function playBuzzer() { playBeep(160, 0.35, 'sawtooth'); }
+
+    // --- NAVIGATION ---
+    function gotoScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    // --- WEBSERIAL HARDWARE LINK TO ESP32 ---
+    let espPort, espReader, espWriter = null;
+    let flowState = 'locked';   // locked -> unlocking -> laptop -> tap -> cctv -> keypad-wait -> keypad -> done
+    const hubLog = [];
+    function renderHubLog() {
+      renderStatusBoard();
+      const el = document.getElementById('hub-log');
+      if (el) el.innerText = "STAGE: " + flowState + "   |   USB: " + (usbConnected ? "connected" : "NOT connected") + "\n" + (hubLog.join("\n") || "(no messages yet)");
+    }
+    function logHub(text) {
+      hubLog.push(new Date().toLocaleTimeString() + "  " + text);
+      if (hubLog.length > 9) hubLog.shift();
+      renderHubLog();
+    }
+    setInterval(renderHubLog, 1000);
+    // ---------------- STATUS BOARD (organizer panel): which board is online / asleep / active / solved ----------------
+    let hubStatus = null, statusSeen = 0, pendingKeypadScan = false;
+    const notices = [];
+    function addNotice(t) {
+      notices.unshift(new Date().toLocaleTimeString() + "  " + t);
+      if (notices.length > 3) notices.pop();
+      renderStatusBoard();
+    }
+    function updateNodeStatus(line) {
+      const o = {};
+      line.split("|").slice(1).forEach(p => { const kv = p.split(":"); o[kv[0]] = kv[1]; });
+      hubStatus = o; statusSeen = Date.now();
+      renderStatusBoard();
+    }
+    // s: '0' asleep, '1' active, '2' solved, 'X' no heartbeat, 'U' USB not connected
+    function nodeRow(s, idx, activeAt, solvedAt, waitingFor) {
+      if (s === 'U') return ['bad', 'UNKNOWN - USB not connected'];
+      if (s === 'X' || s === undefined) return ['bad', 'OFFLINE - no signal from this board'];
+      const word = { '0': 'asleep', '1': 'active', '2': 'solved' }[s] || s;
+      if (idx >= solvedAt) return s === '2' ? ['done', 'SOLVED ✓'] : ['warn', 'should be finished, but the board says: ' + word];
+      if (idx >= activeAt) return s === '1' ? ['act', 'ACTIVE - waiting to be solved'] : s === '2' ? ['done', 'SOLVED ✓ (website catching up)'] : ['warn', 'NOT ACTIVATED - board did not wake up (check link / MAC)'];
+      return s === '0' ? ['wait', 'NOT ACTIVATED YET - ' + waitingFor] : ['warn', 'ACTIVE TOO EARLY - the board says: ' + word];
+    }
+    function renderStatusBoard() {
+      const el = document.getElementById('status-board');
+      if (!el) return;
+      const idx = ['locked', 'unlocking', 'laptop', 'tap', 'cctv', 'keypad-wait', 'keypad', 'done'].indexOf(flowState);
+      const fresh = usbConnected && hubStatus && (Date.now() - statusSeen < 7000);
+      const S = fresh ? hubStatus : {};
+      const n = key => !usbConnected ? 'U' : (!fresh ? 'X' : S[key]);
+      const rows = [];
+      rows.push(['HUB (USB cable)', !usbConnected ? ['bad', 'NOT CONNECTED'] : fresh ? ['done', 'CONNECTED'] : ['bad', 'USB OPEN BUT THE HUB IS NOT ANSWERING']]);
+      rows.push(['1 · RFID card #1', idx >= 1 ? ['done', 'SCANNED ✓'] : ['wait', 'NOT SCANNED YET']]);
+      rows.push(['2 · Captcha (laptop)', idx >= 3 ? ['done', 'DONE ✓'] : idx === 2 ? ['act', 'IN PROGRESS'] : ['wait', 'NOT STARTED - waiting for the RFID card']]);
+      rows.push(['3 · Tap board', nodeRow(n('tap'), idx, 3, 4, 'waiting for the captcha')]);
+      rows.push(['     Clue station', nodeRow(n('clue'), idx, 3, 4, 'waiting for the captcha')]);
+      rows.push(['4 · Joystick board', nodeRow(n('joy'), idx, 4, 5, 'waiting for the tap puzzle')]);
+      let kp;
+      if (idx < 5) kp = ['wait', 'LOCKED - waiting for the joystick puzzle'];
+      else if (flowState === 'keypad-wait') kp = S.hub === '3' ? ['act', 'WAITING FOR RFID CARD #2'] : S.hub === '4' ? ['act', 'CARD SCANNED - keypad active'] : ['warn', 'website expects card #2 but the hub is not ready (hub state ' + S.hub + ')'];
+      else if (flowState === 'keypad') kp = ['act', 'ACTIVE - waiting for the code'];
+      else kp = ['done', 'SOLVED ✓'];
+      rows.push(['5 · Keypad + RFID #2', kp]);
+      const v = n('vault');
+      rows.push(['6 · Vault (maglock)',
+        v === 'U' ? ['bad', 'UNKNOWN - USB not connected'] :
+        (v === 'X' || v === undefined) ? ['bad', 'OFFLINE - no signal from this board'] :
+        idx >= 7 ? (v === '2' ? ['done', 'UNLOCKED ✓'] : ['warn', 'should be unlocked but still LOCKED']) :
+        v === '0' ? ['wait', 'LOCKED - maglock holding'] : ['warn', 'UNLOCKED TOO EARLY']]);
+      el.innerHTML = rows.map(r => '<div class="sb-row sb-' + r[1][0] + '"><span>' + r[0] + '</span><b>' + r[1][1] + '</b></div>').join('') +
+        (notices.length ? '<div class="sb-notice">⚠ ' + notices.join('<br>⚠ ') + '</div>' : '');
+    }
+    async function sendToESP(text, quiet) {
+      if (!espWriter) { if (!quiet) logHub("x NOT SENT (USB not connected): " + text); return; }
+      try { await espWriter.write(new TextEncoder().encode(text + "\n")); if (!quiet) logHub("-> " + text); }
+      catch (e) { console.log(e); logHub("x SEND FAILED: " + text); }
+    }
+    let usbConnected = false, usbOpening = false;
+
+    function friendlyUsbError(err) {
+      if (err && err.name === 'NotFoundError') return "NO PORT SELECTED";
+      if (err && (err.name === 'NetworkError' || /open/i.test(err.message || ''))) return "PORT BUSY - CLOSE ARDUINO SERIAL MONITOR / OTHER TABS";
+      return "ERROR: " + ((err && (err.message || err.name)) || "unknown");
+    }
+
+    function handleSerialLine(line) {
+      if (line.startsWith("STATUS|")) { updateNodeStatus(line); return; }   // board status every 2 s (not logged)
+      console.log("[ESP32 SERIAL]", line);
+      if (line) logHub("<- " + line);
+      if (line.includes("RFID_SCAN") || line.includes("RFID_UNLOCKED")) onRfidScan();
+      else if (line.includes("TAP_SOLVED")) solveKnock();
+      else if (line.includes("JOYSTICK_SOLVED")) solveJoystick();
+      else if (line.includes("KEY_COUNT:")) setKeypadSlots(parseInt(line.split("KEY_COUNT:")[1]) || 0);
+      else if (line.includes("KEYPAD_WRONG")) { playBuzzer(); setKeypadSlots(0); }
+      else if (line.includes("FINAL ESCAPE") || line.includes("KEYPAD_SOLVED")) solveKeypad();
+      else if (line.includes("RX_TAP: IGNORED")) addNotice("The tap board reported SOLVED too early - ignored (the tap puzzle was not activated yet).");
+      else if (line.includes("RX_JOYSTICK: IGNORED")) addNotice("The joystick board reported SOLVED too early - ignored (the joystick puzzle was not activated yet).");
+    }
+
+    async function connectESP32Serial(knownPort) {
+      if (!("serial" in navigator)) {
+        alert("Web Serial API is supported in Google Chrome, Microsoft Edge, or Opera.");
+        return;
+      }
+      if (usbConnected || usbOpening) return;        // already connected (or busy connecting): keep the green status
+      usbOpening = true;
+      try {
+        espPort = knownPort || await navigator.serial.requestPort();
+        try { await espPort.open({ baudRate: 115200 }); }
+        catch (e) { if (e.name !== 'InvalidStateError') throw e; }   // "already open" is fine
+        espWriter = espPort.writable.getWriter();
+        usbConnected = true;
+        setUsbStatus(true);
+        if (gameStarted) [0, 1500, 3500].forEach(ms => setTimeout(() => sendToESP("START_GAME"), ms));   // hub may still be rebooting
+
+        // Keep reading as long as the port exists. A read error (noise while the ESP32 reboots) must NOT drop the connection.
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (espPort.readable) {
+          espReader = espPort.readable.getReader();
+          try {
+            while (true) {
+              const { value, done } = await espReader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split("\n");
+              buf = lines.pop();
+              lines.forEach(l => handleSerialLine(l.trim()));
+            }
+          } catch (e) {
+            console.warn("Serial read error (still connected):", e);
+            await new Promise(r => setTimeout(r, 100));
+          } finally {
+            espReader.releaseLock();
+          }
+        }
+        setUsbStatus(false, "CABLE UNPLUGGED / PORT LOST");
+      } catch (err) {
+        console.error("Serial connection error:", err);
+        setUsbStatus(false, friendlyUsbError(err));
+      } finally {
+        usbOpening = false;
+        usbConnected = false;
+        espWriter = null;
+      }
+    }
+
+    // Keyboard Shortcuts for quick testing (disabled when SHOW_GM_TEST_BUTTONS is false)
+    window.addEventListener('keydown', (e) => {
+      if (!SHOW_GM_TEST_BUTTONS || e.target.tagName === 'INPUT') return;
+      if (e.key === 'r' || e.key === 'R') simulateRFID();
+      if (e.key === 'k' || e.key === 'K') solveKeypad();
+    });
+
+    // --- 1. RFID: first scan unlocks ALICE, second scan (after the joystick) activates the keypad ---
+    function onRfidScan() {
+      if (!gameStarted) return;   // ignore card scans until START ESCAPE ROOM has finished
+      if (flowState === 'locked') startAuraUnlock();
+      else if (flowState === 'keypad-wait') { if (fxBusy) pendingKeypadScan = true; else activateKeypad(); }
+    }
+    function simulateRFID() { onRfidScan(); }
+
+    function startAuraUnlock() {
+      flowState = 'unlocking';
+      startTimer();
+      playChime();
+      document.getElementById('active-step-lbl').innerText = "ALICE AUTHENTICATION";
+      rcEl('aura-locked-core').style.display = 'none';
+      rcEl('aura-unlock-seq').style.display = 'block';
+      const log = rcEl('unlock-log'), fill = rcEl('unlock-fill');
+      gotoScreen('screen-locked'); log.innerHTML = ''; fill.style.width = '0';
+      rcEl('unlock-glyph').innerText = '🔒'; rcEl('unlock-ring').classList.remove('opened');
+      rcEl('unlock-title').innerText = 'ALICE AUTHENTICATING...'; rcEl('unlock-title').style.color = 'var(--cyan)';
+      const steps = ["> ACCESS KEYCARD DETECTED", "> VERIFYING LEVEL-3 CLEARANCE...", "> NEURAL HANDSHAKE WITH ALICE...", "> ENCRYPTION KEY ACCEPTED", "> TERMINAL UNLOCKED"];
+      steps.forEach((t, i) => setTimeout(() => {
+        log.innerHTML += t + '<br>';
+        fill.style.width = ((i + 1) / steps.length * 100) + '%';
+        playBeep(500 + i * 120, 0.08, 'square');
+      }, 600 + i * 800));
+      const done = 600 + steps.length * 800;
+      setTimeout(() => {
+        rcEl('unlock-glyph').innerText = '🔓';
+        rcEl('unlock-ring').classList.add('opened');
+        rcEl('unlock-title').innerText = 'ALICE ONLINE';
+        rcEl('unlock-title').style.color = 'var(--green)';
+        playChime();
+      }, done);
+      setTimeout(() => {
+        flowState = 'laptop';
+        document.getElementById('active-step-lbl').innerText = "TURING RIDDLE";
+        gotoScreen('screen-riddle');
+      }, done + 1400);
+    }
+
+    function gmSkipCaptcha() {
+      captchaDone = true;
+      sendToESP("ACTIVATE_CLUE");
+      rcEl('rc-modal').style.display = 'none';
+      // Do not wake the physical puzzle until the website is ready to handle TAP_SOLVED.
+      playFx('captcha', () => {
+        flowState = 'tap';
+        document.getElementById('active-step-lbl').innerText = "ACOUSTIC CALIBRATION";
+        gotoScreen('screen-knock');
+        sendToESP("ACTIVATE_TAP");
+      });
+    }
+
+    // Second RFID scan: keypad power-up (green sweep + diagonal key wave), then the clues slide in
+    function activateKeypad() {
+      flowState = 'keypad';
+      gotoScreen('screen-keypad');
+      document.getElementById('active-step-lbl').innerText = "OVERRIDE KEYPAD";
+      const msg = rcEl('kp-locked-msg'), stage = rcEl('kp-stage'), grid = rcEl('kp-grid'), clues = rcEl('kp-clues');
+      msg.style.display = 'block'; msg.classList.add('granted');
+      msg.innerHTML = '🔓 CARD VERIFIED<small>Keypad membrane powering up...</small>';
+      clues.style.display = 'none'; clues.classList.remove('kp-reveal');
+      stage.classList.add('kp-disabled');
+      setKeypadSlots(0);
+      playChime();
+      setTimeout(() => {
+        stage.classList.remove('kp-disabled');
+        stage.classList.add('kp-powerup');
+        [...grid.children].forEach((k, i) => {
+          const d = ((i >> 2) + (i & 3)) * 140;                      // diagonal wave across the keys
+          setTimeout(() => { k.classList.add('lit'); playBeep(400 + d * 0.6, 0.06, 'triangle'); setTimeout(() => k.classList.remove('lit'), 350); }, d);
+        });
+      }, 600);
+      setTimeout(() => {
+        msg.style.display = 'none'; msg.classList.remove('granted');
+        msg.innerHTML = '🔒 KEYPAD MEMBRANE LOCKED<small>Vector routing verified. Scan the RFID card again to activate the keypad.</small>';
+        stage.classList.remove('kp-powerup');
+        clues.style.display = 'block'; clues.classList.add('kp-reveal');
+        playChime();
+      }, 2300);
+    }
+
+    function setKeypadSlots(n) {
+      document.querySelectorAll('#screen-keypad .kp-slots span').forEach((el, i) => { el.innerText = i < n ? '●' : '_'; });
+    }
+
+    // --- 2. RIDDLE CHECK ---
+    // --- 2. RIDDLE: easy 4-choice question. Wrong answer = -30 seconds ---
+    const RIDDLES = [
+      { q: ["I keep your accounts and computers safe.", "Only people who know me can get in.", "What am I?"],
+        ok: "Password", wrong: ["A keyboard", "A wallpaper", "A screensaver"] },
+      { q: ["I am a harmful program that spreads", "from computer to computer and causes damage.", "What am I?"],
+        ok: "Virus", wrong: ["A web browser", "A video game", "A search engine"] },
+      { q: ["I am a smart computer program.", "I can chat with you, answer your questions,", "and learn from information.", "What am I?"],
+        ok: "Artificial Intelligence", wrong: ["Artifical Intelligence", "Artificial Inteligence", "Artificial Intelligense"], spelling: true }   // last question: pick the correct SPELLING
+    ];
+    let riddleIndex = 0;
+    function showRiddle() {
+      const r = RIDDLES[riddleIndex];
+      document.getElementById('riddle-counter').innerText = "QUESTION " + (riddleIndex + 1) + " OF " + RIDDLES.length + (r.spelling ? "  -  choose the CORRECT SPELLING" : "  -  choose the correct answer");
+      document.getElementById('riddle-q').innerHTML = '"' + r.q.join("<br>") + '"';
+      document.getElementById('riddle-msg').innerHTML = '';
+      const box = document.getElementById('riddle-choices');
+      box.innerHTML = '';
+      [{ t: r.ok, ok: true }, ...r.wrong.map(t => ({ t }))].sort(() => Math.random() - 0.5).forEach((c, i) => {
+        const b = document.createElement('button');
+        b.className = 'choice-btn';
+        b.innerHTML = `<span class="choice-key">${'ABCD'[i]}</span>${c.t}`;
+        b.onclick = () => pickRiddle(b, !!c.ok);
+        box.appendChild(b);
+      });
+    }
+    function pickRiddle(btn, ok) {
+      const msg = document.getElementById('riddle-msg');
+      if (ok) {
+        playChime();
+        btn.classList.add('right');
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        msg.style.color = 'var(--green)';
+        if (riddleIndex < RIDDLES.length - 1) {
+          msg.innerHTML = "✓ CORRECT! Next question...";
+          riddleIndex++;
+          setTimeout(showRiddle, 1100);
+        } else {
+          msg.innerHTML = "✓ CORRECT! All questions answered. Now verify that you are human:";
+          document.getElementById('recaptcha-section').style.display = 'block';
+        }
+      } else {
+        playBuzzer();
+        btn.classList.add('wrong');
+        btn.disabled = true;
+        msg.style.color = 'var(--red)';
+        msg.innerHTML = "✗ Not quite. -30 seconds! Try another answer.";
+        timerPenalty();
+      }
+    }
+    showRiddle();
+
+    // --- GAME TIMER: 15:00, starts at the first RFID scan, -30s per wrong riddle answer, stops when the keypad is solved ---
+    const GAME_SECONDS = 15 * 60, PENALTY_SECONDS = 30;
+    let timeLeft = GAME_SECONDS, timerInt = null, timerStarted = false;
+    function renderTimer() {
+      const m = String(Math.floor(timeLeft / 60)).padStart(2, '0'), s = String(timeLeft % 60).padStart(2, '0');
+      document.getElementById('t-digits').innerText = m + ':' + s;
+      const box = document.getElementById('game-timer');
+      box.classList.toggle('low', timeLeft <= 120 && timeLeft > 0 && !box.classList.contains('stopped'));
+      box.classList.toggle('expired', timeLeft === 0);
+      document.getElementById('t-label').innerText = timeLeft === 0 ? "TIME'S UP!" : "TIME LEFT";
+    }
+    function startTimer() {
+      if (timerStarted) return;
+      timerStarted = true;
+      timerInt = setInterval(() => {
+        timeLeft = Math.max(0, timeLeft - 1);
+        renderTimer();
+        if (timeLeft === 0) { clearInterval(timerInt); playBuzzer(); }
+      }, 1000);
+    }
+    function stopTimer() {
+      clearInterval(timerInt);
+      document.getElementById('game-timer').classList.remove('low', 'expired');
+      document.getElementById('game-timer').classList.add('stopped');
+      document.getElementById('t-label').innerText = "ESCAPED IN";
+    }
+    function timerPenalty() {
+      timeLeft = Math.max(0, timeLeft - PENALTY_SECONDS);
+      renderTimer();
+      const pen = document.getElementById('timer-pen');
+      pen.classList.remove('show'); void pen.offsetWidth; pen.classList.add('show');
+      if (timeLeft === 0) { clearInterval(timerInt); playBuzzer(); }
+    }
+    renderTimer();
+
+    // =========================================================================
+    // reCAPTCHA: 1) Traffic-light grid  2) Type the text  3) Slide the puzzle
+    // (every image is drawn in code, so no image files are needed)
+    // =========================================================================
+    let currentChallenge = 0, captchaBusy = false, captchaDone = false;
+    const rcEl = id => document.getElementById(id);
+    const rcRnd = (a, b) => a + Math.random() * (b - a);
+    const rcClamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    function rcError(msg) {
+      const e = rcEl('rc-error');
+      e.innerText = msg || '';
+      e.classList.toggle('show', !!msg);
+      if (msg) { const c = rcEl('rc-modal-card'); c.classList.remove('rc-shake'); void c.offsetWidth; c.classList.add('rc-shake'); }
+    }
+    function setRcHeader(sub, title, step, note) {
+      rcEl('rc-sub').innerText = sub; rcEl('rc-title').innerText = title; rcEl('rc-step').innerText = step + ' / 3'; rcEl('rc-note').innerText = note || '';
+    }
+
+    function onCheckboxClick() {
+      if (captchaBusy || captchaDone) return;
+      captchaBusy = true;
+      playBeep(700, 0.08);
+      rcEl('rc-spin').style.display = 'block';
+      setTimeout(() => {
+        rcEl('rc-spin').style.display = 'none';
+        currentChallenge = 0;
+        rcEl('rc-modal').style.display = 'flex';
+        loadChallenge(0);
+      }, 700);
+    }
+    function closeCaptchaModal() {
+      if (captchaDone || rcEl('rc-modal').style.display !== 'flex') return;
+      rcEl('rc-modal').style.display = 'none';
+      captchaBusy = false; currentChallenge = 0;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+    rcEl('rc-modal').addEventListener('mousedown', e => { if (e.target === rcEl('rc-modal')) closeCaptchaModal(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeCaptchaModal(); });
+
+    function loadChallenge(index) {
+      rcError('');
+      const box = rcEl('rc-content');
+      box.innerHTML = ''; box.className = 'rc-body';
+      rcEl('rc-verify-btn').style.display = ''; rcEl('rc-verify-btn').disabled = false;
+      if (index === 0) loadTrafficChallenge(box);
+      else if (index === 1) loadTextChallenge(box);
+      else loadPuzzleChallenge(box);
+    }
+    function reloadChallenge() { playBeep(300, 0.1); loadChallenge(currentChallenge); }
+    function nextChallenge() { playChime(); currentChallenge++; loadChallenge(currentChallenge); }
+    function verifyCurrentStage() {
+      if (currentChallenge === 0) verifyTraffic();
+      else if (currentChallenge === 1) verifyText();
+    }
+
+    // ---------- CHALLENGE 1: TRAFFIC LIGHTS (4x4 grid) ----------
+    let tlRequired = new Set(), tlOptional = new Set();
+
+    function buildTrafficScene() {
+      const S = 400, H0 = 290, cv = document.createElement('canvas');
+      cv.width = cv.height = S;
+      const g = cv.getContext('2d');
+      const sky = g.createLinearGradient(0, 0, 0, H0);
+      sky.addColorStop(0, '#86a9d1'); sky.addColorStop(1, '#d4dfe8');
+      g.fillStyle = sky; g.fillRect(0, 0, S, S);
+      const bx = rcRnd(5, 30), bw = rcRnd(70, 100);              // low buildings, far left
+      g.fillStyle = '#c9a37e'; g.fillRect(bx, 262, bw, 30);
+      g.fillStyle = '#9a5a45'; g.fillRect(bx - 2, 258, bw + 4, 5);
+      for (let x = 0; x < S; x += 9) {                           // tree line on the horizon
+        g.fillStyle = `hsl(${rcRnd(100, 130)},35%,${rcRnd(22, 34)}%)`;
+        g.beginPath(); g.arc(x + rcRnd(0, 8), rcRnd(276, 290), rcRnd(10, 19), 0, 7); g.fill();
+      }
+      g.fillStyle = '#74777b'; g.fillRect(0, H0, S, S - H0);     // asphalt
+      g.fillStyle = '#bfbcb4'; g.beginPath(); g.moveTo(262, H0); g.lineTo(S, 345); g.lineTo(S, S); g.lineTo(335, S); g.fill();
+      g.strokeStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.moveTo(250, H0); g.quadraticCurveTo(262, 345, 322, S); g.stroke();
+      g.strokeStyle = '#e6e6e6'; g.lineWidth = 3; g.setLineDash([10, 14]); g.beginPath(); g.moveTo(200, H0 + 4); g.lineTo(172, S); g.stroke(); g.setLineDash([]);
+      g.strokeStyle = '#d8b640'; g.beginPath(); g.moveTo(140, H0 + 6); g.lineTo(-10, 372); g.moveTo(146, H0 + 8); g.lineTo(-4, 382); g.stroke();
+      const car = (x, y, s) => {
+        g.fillStyle = '#2b2d31'; g.fillRect(x, y, 34 * s, 16 * s); g.fillRect(x + 6 * s, y - 9 * s, 22 * s, 10 * s);
+        g.fillStyle = '#8fa6b8'; g.fillRect(x + 9 * s, y - 7 * s, 16 * s, 6 * s);
+        g.fillStyle = '#111'; g.beginPath(); g.arc(x + 7 * s, y + 16 * s, 4 * s, 0, 7); g.arc(x + 27 * s, y + 16 * s, 4 * s, 0, 7); g.fill();
+      };
+      car(rcRnd(95, 130), 345, 1.1); car(rcRnd(195, 215), 322, 0.55);
+      const palm = (x, top, lean) => {                           // palm trees
+        g.strokeStyle = '#7a6a56'; g.lineWidth = 7; g.beginPath(); g.moveTo(x, H0 + 4); g.quadraticCurveTo(x + lean * 0.2, (H0 + top) / 2, x + lean, top); g.stroke();
+        g.strokeStyle = '#2f6b32'; g.lineWidth = 4;
+        for (let a = -2.8; a <= 0.4; a += 0.5) {
+          g.beginPath(); g.moveTo(x + lean, top);
+          g.quadraticCurveTo(x + lean + Math.cos(a) * 22, top - 14, x + lean + Math.cos(a) * 38, top + Math.sin(a) * 22 + 18); g.stroke();
+        }
+      };
+      palm(rcRnd(345, 375), rcRnd(165, 195), rcRnd(-14, 6)); palm(rcRnd(8, 25), rcRnd(190, 215), rcRnd(-6, 10));
+      g.strokeStyle = '#999'; g.lineWidth = 4; g.beginPath(); g.moveTo(S + 4, 100); g.lineTo(378, 118); g.stroke();   // decoy: street lamp
+      g.fillStyle = '#ddd'; g.fillRect(366, 116, 14, 5);
+
+      const arm = { x1: rcRnd(30, 70), y1: rcRnd(185, 205), x2: S, y2: rcRnd(235, 255) };   // mast arm
+      g.strokeStyle = '#2d4a3a'; g.lineWidth = 4; g.beginPath(); g.moveTo(arm.x1, arm.y1); g.lineTo(arm.x2, arm.y2); g.stroke();
+      g.lineWidth = 2; g.beginPath(); g.moveTo(arm.x1 + 30, arm.y1 + 3); g.lineTo(S, arm.y2 - 18); g.stroke();
+      const armY = x => arm.y1 + (arm.y2 - arm.y1) * (x - arm.x1) / (arm.x2 - arm.x1);
+      const xa = rcRnd(arm.x1 + 5, 165), xb = rcRnd(xa + 100, 270);
+      const lights = [xa, xb].map(x => ({ x, y: armY(x + 15) + 6, w: 30, h: 67 }));   // always two traffic lights
+      lights.forEach(l => {
+        const cx = l.x + l.w / 2, lit = Math.floor(Math.random() * 3), cols = ['#ff3b30', '#ffcc00', '#34c759'];
+        g.fillStyle = '#2a2d30'; g.fillRect(cx - 2, armY(cx), 4, 8);
+        g.fillStyle = '#1c1f22'; g.fillRect(l.x, l.y, l.w, l.h);
+        cols.forEach((c, i) => {
+          g.shadowColor = c; g.shadowBlur = i === lit ? 14 : 0;
+          g.fillStyle = i === lit ? c : '#0d0f10';
+          g.beginPath(); g.arc(cx, l.y + l.h * (0.2 + i * 0.3), 9, 0, 7); g.fill();
+        });
+        g.shadowBlur = 0;
+      });
+      const v = g.createRadialGradient(200, 200, 150, 200, 200, 290);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.22)'); g.fillStyle = v; g.fillRect(0, 0, S, S);
+      for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(0,0,0,${rcRnd(0.02, 0.08)})`; g.fillRect(rcRnd(0, S), rcRnd(0, S), 2, 2); }
+      return { cv, lights, arm };
+    }
+
+    let tlMistakes = 0, tlHits = 0, tlSwaps = 0;
+
+    // 'req' = tile shows a traffic light, 'opt' = only a sliver / the mast arm, 'none' = nothing
+    function tlClassify(sc, r, c) {
+      const tx = c * 100, ty = r * 100;
+      let res = 'none';
+      sc.lights.forEach(l => {
+        const ow = Math.min(l.x + l.w, tx + 100) - Math.max(l.x, tx), oh = Math.min(l.y + l.h, ty + 100) - Math.max(l.y, ty);
+        if (ow > 0 && oh > 0) { if (ow * oh >= 400) res = 'req'; else if (res !== 'req') res = 'opt'; }
+      });
+      if (res === 'none') {
+        const a = sc.arm;
+        for (let t = 0; t <= 1; t += 0.01) {
+          if (Math.floor((a.y1 + (a.y2 - a.y1) * t) / 100) === r && Math.floor((a.x1 + (a.x2 - a.x1) * t) / 100) === c) { res = 'opt'; break; }
+        }
+      }
+      return res;
+    }
+
+    // puts an image into a tile (the first scene, or a brand-new scene when a tile is replaced)
+    function tlFill(tile, r, c, first) {
+      let sc = first, kind;
+      if (!sc) {
+        tlSwaps++;
+        const wantLight = tlSwaps <= 6 && Math.random() < 0.3;   // after a few swaps new images stop having lights
+        for (let i = 0; i < 40; i++) {
+          sc = buildTrafficScene(); kind = tlClassify(sc, r, c);
+          if (wantLight ? kind === 'req' : kind === 'none') break;
+        }
+      }
+      tile.dataset.kind = kind || tlClassify(sc, r, c);
+      let tc = tile.querySelector('canvas');
+      if (!tc) { tc = document.createElement('canvas'); tc.width = tc.height = 100; tile.appendChild(tc); }
+      tc.getContext('2d').drawImage(sc.cv, c * 100, r * 100, 100, 100, 0, 0, 100, 100);
+    }
+
+    function tlClick(tile) {
+      if (tile.dataset.busy) return;
+      const r = +tile.dataset.r, c = +tile.dataset.c, kind = tile.dataset.kind;
+      tile.dataset.busy = '1';
+      playBeep(500, 0.04);
+      tile.classList.add('selected');
+      if (kind === 'req') tlHits++; else if (kind === 'none') tlMistakes++;
+      setTimeout(() => {                                   // old image fades out...
+        tile.classList.add('tl-fade');
+        setTimeout(() => {                                 // ...and a fresh image pops in
+          tlFill(tile, r, c);
+          tile.classList.remove('selected', 'tl-fade');
+          delete tile.dataset.busy;
+        }, 200);
+      }, 450);
+    }
+
+    // Click a square -> it splits into 4. Click again -> splits into 4 once more (16x16 overall).
+    // Select every tiny square that holds a light; Verify unlocks once they are all selected.
+    function loadTrafficChallenge(box) {
+      setRcHeader('Select all squares with', 'Traffic Lights', 1);
+      const { cv, lights, arm } = buildTrafficScene();
+      tlRequired = new Set(); tlOptional = new Set();
+      for (let t = 0; t <= 1; t += 0.005) tlOptional.add(Math.floor((arm.y1 + (arm.y2 - arm.y1) * t) / 25) + '_' + Math.floor((arm.x1 + (arm.x2 - arm.x1) * t) / 25));   // mast arm: optional
+      for (let r = 0; r < 16; r++) for (let c = 0; c < 16; c++) lights.forEach(l => {
+        const ow = Math.min(l.x + l.w, c * 25 + 25) - Math.max(l.x, c * 25), oh = Math.min(l.y + l.h, r * 25 + 25) - Math.max(l.y, r * 25);
+        if (ow > 0 && oh > 0 && ow * oh >= 220) tlRequired.add(r + '_' + c);   // clearly part of the light: must be selected
+        else if (Math.min(l.x + l.w + 8, c * 25 + 25) > Math.max(l.x - 8, c * 25) && Math.min(l.y + l.h + 8, r * 25 + 25) > Math.max(l.y - 8, r * 25)) tlOptional.add(r + '_' + c);   // edge/glow: allowed, not needed
+      });
+      const slice = (x, y, s) => { const t = document.createElement('canvas'); t.width = t.height = s; t.getContext('2d').drawImage(cv, x, y, s, s, 0, 0, s, s); return t; };
+      const split = (r, c, size, onTile) => {              // builds the 2x2 grid that replaces a square
+        const sub = document.createElement('div'); sub.className = 'tl-sub';
+        for (let i = 0; i < 4; i++) {
+          const rr = r * 2 + (i >> 1), cc = c * 2 + (i & 1), st = document.createElement('div');
+          st.className = 'photo-tile'; st.appendChild(slice(cc * size, rr * size, size));
+          onTile(st, rr, cc); sub.appendChild(st);
+        }
+        return sub;
+      };
+      const grid = document.createElement('div');
+      grid.className = 'grid-4x4'; grid.id = 'tl-grid';
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+        const slot = document.createElement('div'), tile = document.createElement('div');
+        tile.className = 'photo-tile'; tile.appendChild(slice(c * 100, r * 100, 100));
+        tile.onclick = () => {
+          playBeep(500, 0.04);
+          slot.replaceChildren(split(r, c, 50, (t2, r2, c2) => {          // level 2 (50px): click to split again
+            t2.onclick = () => {
+              playBeep(520, 0.04);
+              t2.replaceWith(split(r2, c2, 25, (t3, r3, c3) => {          // level 3 (25px): selectable
+                t3.dataset.key = r3 + '_' + c3;
+                t3.onclick = () => { playBeep(550, 0.04); t3.classList.toggle('selected'); tlUpdate(); };
+              }));
+            };
+          }));
+        };
+        slot.appendChild(tile); grid.appendChild(slot);
+      }
+      box.appendChild(grid); tlUpdate();
+    }
+    function tlSelected() { return [...document.querySelectorAll('#tl-grid .photo-tile.selected')].map(t => t.dataset.key); }
+    function tlUpdate() { const sel = tlSelected(); rcEl('rc-verify-btn').disabled = ![...tlRequired].every(k => sel.includes(k)); }
+    function verifyTraffic() {
+      const sel = tlSelected();
+      if (sel.every(k => tlRequired.has(k) || tlOptional.has(k)) && [...tlRequired].every(k => sel.includes(k))) nextChallenge();
+      else { playBuzzer(); loadChallenge(0); rcError('Please try again with a new image.'); }
+    }
+
+    // ---------- CHALLENGE 2: TYPE THE TEXT ----------
+    let captchaWord = '';
+    function loadTextChallenge(box) {
+      setRcHeader('Type the characters you see', 'Distorted Text', 2);
+      box.innerHTML = `<div class="rc-text-wrap"><div class="rc-text-img"><canvas id="captcha-canvas" width="400" height="120"></canvas>
+        <button class="rc-icon-btn" style="left:8px" onclick="playCaptchaAudio()" title="Listen">🔊</button>
+        <button class="rc-icon-btn" style="right:8px" onclick="refreshCaptchaText()" title="New code">🔄</button></div>
+        <input id="neal-text-input" class="rc-text-input" type="text" placeholder="Type the text" autocomplete="off" spellcheck="false" maxlength="10"></div>`;
+      rcEl('neal-text-input').addEventListener('keydown', e => { if (e.key === 'Enter') verifyCurrentStage(); });
+      refreshCaptchaText(true);
+    }
+    function refreshCaptchaText(silent) {
+      if (silent !== true) playBeep(750, 0.08);
+      const abc = 'ACDEFGHJKMNPRTWXY346789';          // no look-alike characters (0/O, 1/I, 5/S, 2/Z...)
+      captchaWord = Array.from({ length: 6 }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+      drawCaptchaCanvas(captchaWord);
+      const i = rcEl('neal-text-input'); if (i) { i.value = ''; i.focus(); }
+    }
+    function drawCaptchaCanvas(word) {
+      const cv = rcEl('captcha-canvas'), g = cv.getContext('2d'), W = 400, H = 120;
+      const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#f7f1e8'); bg.addColorStop(1, '#e7edf7');
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 7; i++) {                  // background squiggles
+        g.strokeStyle = `hsla(${rcRnd(0, 360)},70%,55%,0.5)`; g.lineWidth = rcRnd(1.5, 3); g.beginPath();
+        g.moveTo(rcRnd(0, W), rcRnd(0, H));
+        g.bezierCurveTo(rcRnd(0, W), rcRnd(0, H), rcRnd(0, W), rcRnd(0, H), rcRnd(0, W), rcRnd(0, H)); g.stroke();
+      }
+      const fonts = ['Arial Black', 'Georgia', 'Courier New', 'Trebuchet MS', 'Verdana'], step = (W - 60) / word.length;
+      [...word].forEach((ch, i) => {                 // each letter: own font, size, tilt, skew, colour
+        g.save();
+        g.translate(40 + step * i + step / 2, H / 2 + rcRnd(-10, 10));
+        g.rotate(rcRnd(-0.5, 0.5)); g.transform(1, 0, rcRnd(-0.3, 0.3), 1, 0, 0);
+        g.font = `bold ${Math.round(rcRnd(42, 56))}px '${fonts[Math.floor(Math.random() * fonts.length)]}'`;
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillStyle = `hsl(${rcRnd(0, 360)},65%,35%)`; g.fillText(ch, 0, 0);
+        g.restore();
+      });
+      for (let i = 0; i < 3; i++) {                  // strike-through lines
+        g.strokeStyle = `rgba(30,30,30,${rcRnd(0.5, 0.8)})`; g.lineWidth = rcRnd(2, 3.5); g.beginPath();
+        g.moveTo(0, rcRnd(25, H - 25)); g.bezierCurveTo(W * 0.3, rcRnd(0, H), W * 0.6, rcRnd(0, H), W, rcRnd(25, H - 25)); g.stroke();
+      }
+      const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+      tmp.getContext('2d').drawImage(cv, 0, 0);      // wave warp
+      const ph = rcRnd(0, 6.28); g.fillStyle = '#f2f0ee'; g.fillRect(0, 0, W, H);
+      for (let x = 0; x < W; x += 2) g.drawImage(tmp, x, 0, 2, H, x, Math.sin(x * 0.045 + ph) * 5, 2, H);
+      for (let i = 0; i < 350; i++) { g.fillStyle = `rgba(0,0,0,${rcRnd(0.05, 0.25)})`; g.fillRect(rcRnd(0, W), rcRnd(0, H), 2, 2); }
+    }
+    function playCaptchaAudio() {
+      playBeep(450, 0.1);
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(captchaWord.split('').join(', '));
+        u.rate = 0.7; window.speechSynthesis.speak(u);
+      }
+    }
+    function verifyText() {
+      const ans = (rcEl('neal-text-input').value || '').replace(/\s+/g, '').toUpperCase();
+      if (ans === captchaWord) nextChallenge();
+      else { playBuzzer(); refreshCaptchaText(true); rcError('Incorrect text. Here is a new one - try again.'); }
+    }
+
+    // ---------- CHALLENGE 3: SLIDE THE PUZZLE PIECE ----------
+    const PZ_W = 400, PZ_H = 200, PZ_S = 46, PZ_R = 9, PZ_T = PZ_S + PZ_R;
+    let pz = { tx: 0, ty: 0, ratio: 0, dragging: false, locked: false, t0: 0, moves: 0 };
+
+    function pzPath(g, x, y) {                       // square with a bump on top and on the right
+      const s = PZ_S, m = s / 2, r = PZ_R;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + m - r, y);
+      g.arc(x + m, y, r, Math.PI, 2 * Math.PI, false);
+      g.lineTo(x + s, y); g.lineTo(x + s, y + m - r);
+      g.arc(x + s, y + m, r, -Math.PI / 2, Math.PI / 2, false);
+      g.lineTo(x + s, y + s); g.lineTo(x, y + s); g.closePath();
+    }
+    function loadPuzzleChallenge(box) {
+      setRcHeader('Slide to complete the puzzle', 'Fit the Piece', 3);
+      rcEl('rc-verify-btn').style.display = 'none';
+      box.innerHTML = `<div class="pz-stage"><canvas class="pz-bg" id="pz-bg" width="${PZ_W}" height="${PZ_H}"></canvas><canvas class="pz-piece" id="pz-piece" width="${PZ_T}" height="${PZ_T}"></canvas></div>
+        <div class="pz-track" id="pz-track"><div class="pz-fill" id="pz-fill"></div><div class="pz-hint" id="pz-hint">Drag the slider to fit the piece</div><div class="pz-handle" id="pz-handle">&#10140;</div></div>`;
+      const handle = rcEl('pz-handle'), track = rcEl('pz-track');
+      handle.addEventListener('pointerdown', e => {
+        if (pz.locked) return;
+        pz.dragging = true; pz.t0 = performance.now(); pz.moves = 0;
+        box.classList.remove('pz-anim'); handle.setPointerCapture(e.pointerId);
+        rcEl('pz-hint').style.opacity = 0; rcError(''); e.preventDefault();
+      });
+      handle.addEventListener('pointermove', e => {
+        if (!pz.dragging) return;
+        pz.moves++;
+        const rect = track.getBoundingClientRect(), hw = handle.offsetWidth;
+        setPzRatio(rcClamp((e.clientX - rect.left - hw / 2) / (rect.width - hw), 0, 1));
+      });
+      const end = () => {
+        if (!pz.dragging) return;
+        pz.dragging = false;
+        const x = pz.ratio * (PZ_W - PZ_T), human = pz.moves >= 4 && performance.now() - pz.t0 >= 250;
+        if (Math.abs(x - pz.tx) <= 6 && human) {
+          pz.locked = true; setPzRatio(pz.tx / (PZ_W - PZ_T)); box.classList.add('pz-ok');
+          playChime(); setTimeout(finishCaptcha, 500);
+        } else {
+          playBuzzer(); box.classList.add('pz-anim'); setPzRatio(0); rcError('Not quite - try again.');
+          setTimeout(() => { box.classList.remove('pz-anim'); buildPuzzle(); }, 350);
+        }
+      };
+      handle.addEventListener('pointerup', end);
+      handle.addEventListener('pointercancel', end);
+      buildPuzzle();
+    }
+    function buildPuzzle() {
+      pz.locked = false; pz.ratio = 0;
+      pz.tx = Math.round(PZ_W * 0.35 + Math.random() * (PZ_W * 0.65 - PZ_T - 12));
+      pz.ty = PZ_R + 20 + Math.round(Math.random() * (PZ_H - PZ_T - 45));
+      const base = document.createElement('canvas'); base.width = PZ_W; base.height = PZ_H;
+      const b = base.getContext('2d'), h = rcRnd(0, 360);
+      const grd = b.createLinearGradient(0, 0, PZ_W, PZ_H);
+      grd.addColorStop(0, `hsl(${h},70%,55%)`); grd.addColorStop(1, `hsl(${h + 70},70%,35%)`);
+      b.fillStyle = grd; b.fillRect(0, 0, PZ_W, PZ_H);
+      for (let i = 0; i < 24; i++) {                 // busy shapes so the fit is easy to judge
+        b.fillStyle = `hsla(${rcRnd(0, 360)},75%,${rcRnd(35, 75)}%,${rcRnd(0.4, 0.9)})`; b.beginPath();
+        if (i % 2) b.arc(rcRnd(0, PZ_W), rcRnd(0, PZ_H), rcRnd(10, 40), 0, 7);
+        else { b.moveTo(rcRnd(0, PZ_W), rcRnd(0, PZ_H)); b.lineTo(rcRnd(0, PZ_W), rcRnd(0, PZ_H)); b.lineTo(rcRnd(0, PZ_W), rcRnd(0, PZ_H)); }
+        b.fill();
+      }
+      const bg = rcEl('pz-bg').getContext('2d');
+      bg.drawImage(base, 0, 0);
+      pzPath(bg, pz.tx, pz.ty); bg.fillStyle = 'rgba(0,0,0,0.55)'; bg.fill();
+      bg.strokeStyle = 'rgba(255,255,255,0.8)'; bg.lineWidth = 2; bg.stroke();
+      const pc = rcEl('pz-piece'), p = pc.getContext('2d');
+      p.clearRect(0, 0, PZ_T, PZ_T); p.save(); pzPath(p, 0, PZ_R); p.clip();
+      p.drawImage(base, -pz.tx, -(pz.ty - PZ_R)); p.restore();
+      pzPath(p, 0, PZ_R); p.strokeStyle = 'rgba(255,255,255,0.9)'; p.lineWidth = 2; p.stroke();
+      pc.style.top = ((pz.ty - PZ_R) / PZ_H * 100) + '%';
+      pc.style.width = (PZ_T / PZ_W * 100) + '%';
+      rcEl('pz-hint').style.opacity = 1;
+      setPzRatio(0);
+    }
+    function setPzRatio(ratio) {
+      pz.ratio = ratio;
+      const track = rcEl('pz-track'), handle = rcEl('pz-handle');
+      const left = ratio * (track.clientWidth - handle.offsetWidth);
+      handle.style.left = left + 'px';
+      rcEl('pz-fill').style.width = (left + handle.offsetWidth / 2) + 'px';
+      rcEl('pz-piece').style.left = (ratio * (PZ_W - PZ_T) / PZ_W * 100) + '%';
+    }
+
+    function finishCaptcha() {
+      captchaDone = true;
+      sendToESP("ACTIVATE_CLUE");   // clue station starts now; the tap puzzle itself is woken once the tap page is showing
+      playChime();
+      rcEl('rc-modal').style.display = 'none';
+      rcEl('rc-spin').style.display = 'block';
+      setTimeout(() => {
+        rcEl('rc-spin').style.display = 'none';
+        rcEl('rc-check').style.display = 'block';
+        rcEl('rc-box').style.borderColor = "#0f9d58";
+        setTimeout(() => playFx('captcha', () => {
+          // Set the flow state and screen BEFORE activating the ESP32.
+          // This prevents a fast TAP_SOLVED serial message being ignored.
+          flowState = 'tap';
+          document.getElementById('active-step-lbl').innerText = "ACOUSTIC CALIBRATION";
+          gotoScreen('screen-knock');
+          sendToESP("ACTIVATE_TAP");
+        }), 600);
+      }, 700);
+    }
+
+    // =========================================================================
+    // 3. HORROR CCTV SURVEILLANCE FEED (BASED ON HORROR/TEST.PY LOGIC!)
+    // =========================================================================
+    let cctvInterval = null;
+    let ghostRun = 0;                       // bump this number to cancel a running ghost sequence
+
+    // Entity sequence (must match what the joystick/ESP32 expects)
+    const GHOST_SEQUENCE = ["UP", "UP", "DOWN", "DOWN", "LEFT", "RIGHT", "LEFT", "RIGHT", "UP", "DOWN"];
+    const GHOST_START_DELAY_S   = 5;        // seconds of plain camera before the entity first appears
+    const GHOST_FADE_MS         = 250;      // fade in / fade out time
+    const GHOST_VISIBLE_MS      = 1200;     // how long it stays visible each time
+    const GHOST_GAP_MS          = 500;      // dark pause before the next appearance
+    const GHOST_LOOP_PAUSE_MS   = 1000;     // dark pause after the sequence, before the next WARNING
+    const GHOST_WARNING_MS      = 2500;     // how long each WARNING glitch lasts
+    const LOOP_SEQUENCE         = true;     // true = replay until the joystick is solved; false = go to hub after one run
+    const ghostSleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // Screen position of the entity for each direction (% of the camera box)
+    const GHOST_COORDS = {
+      "UP":    { top: "8%",  left: "calc(50% - 85px)" },
+      "DOWN":  { top: "58%", left: "calc(50% - 85px)" },
+      "LEFT":  { top: "33%", left: "50px" },
+      "RIGHT": { top: "33%", left: "calc(100% - 220px)" }
+    };
+
+    // Built-in "rogue AI virus" entity, used automatically if images/ghost.png can't be loaded
+    const VIRUS_ENTITY_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 170">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b2a22"/><stop offset="1" stop-color="#02080a"/></linearGradient></defs>
+<path d="M85 12C50 12 34 40 34 70C34 98 44 112 52 128V158L68 150L85 160L102 150L118 158V128C126 112 136 98 136 70C136 40 120 12 85 12Z" fill="url(#g)" stroke="#00ffa6" stroke-width="2"/>
+<rect x="40" y="46" width="70" height="4" fill="#00ffa6" opacity=".35"/><rect x="58" y="96" width="76" height="4" fill="#00ffa6" opacity=".5"/><rect x="38" y="112" width="64" height="4" fill="#ff1744" opacity=".55"/>
+<path d="M50 66L79 73V82L56 79Z" fill="#ff1744"/><path d="M120 66L91 73V82L114 79Z" fill="#ff1744"/>
+<text x="85" y="140" text-anchor="middle" font-family="monospace" font-size="11" fill="#00ffa6">01101 ALICE</text></svg>`);
+    (function () {
+      const img = document.getElementById('ghost-img');
+      const useFallback = () => { img.alt = "Rogue AI virus"; if (img.src !== VIRUS_ENTITY_SVG) img.src = VIRUS_ENTITY_SVG; };
+      img.addEventListener('error', useFallback);
+      if (img.complete && img.naturalWidth === 0) useFallback();
+    })();
+
+    function startCCTVFeed() {
+      document.getElementById('active-step-lbl').innerText = "CCTV SURVEILLANCE";
+      gotoScreen('screen-cctv');
+
+      ghostRun++;                           // cancel any earlier run
+      clearInterval(cctvInterval);
+      const ghost = document.getElementById('ghost-entity-container');
+      ghost.style.display = "none"; ghost.style.opacity = 0;
+      document.getElementById('virus-warning').classList.remove('show');
+      document.getElementById('hud-alert-txt').style.display = "none";
+
+      initWebcam();
+      startGlitchNoise();
+
+      let countdown = GHOST_START_DELAY_S;
+      const countLbl = document.getElementById('cctv-countdown-lbl');
+      countLbl.style.color = "";
+      countLbl.innerText = `SIGNAL STABILIZING: ${countdown}s`;
+
+      cctvInterval = setInterval(() => {
+        const timeStr = new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString();
+        document.getElementById('cctv-timestamp-1').innerText = timeStr;
+
+        countdown--;
+        if (countdown > 0) {
+          countLbl.innerText = `SIGNAL STABILIZING: ${countdown}s`;
+        } else if (countdown === 0) {
+          countLbl.innerText = "CRITICAL: ANOMALY PRESENT";
+          countLbl.style.color = "var(--red)";
+          triggerHorrorGhostEvent();
+        }
+      }, 1000);
+    }
+
+    function initWebcam() {
+      const video = document.getElementById('cctv-cam-feed');
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            video.srcObject = stream;
+            video.style.display = "block";
+            document.getElementById('cctv-dark-room').style.display = "none";
+          })
+          .catch(() => console.log("No webcam / permission denied. Using dark room background."));
+      }
+    }
+
+    // Glitchy "WARNING WARNING" overlay + alarm. Plays before the virus appears and again after the sequence.
+    async function playWarning(ms, run) {
+      const el = document.getElementById('virus-warning');
+      el.classList.add('show');
+      let hi = true;
+      const alarm = setInterval(() => {
+        if (run !== ghostRun) { clearInterval(alarm); return; }
+        playBeep(hi ? 900 : 600, 0.18, 'square'); hi = !hi;
+      }, 220);
+      await ghostSleep(ms);
+      clearInterval(alarm);
+      el.classList.remove('show');
+    }
+
+    // Timeline: 5s normal camera -> WARNING -> virus fades in/out through the sequence -> WARNING
+    async function triggerHorrorGhostEvent() {
+      const run = ++ghostRun;
+      const ghost = document.getElementById('ghost-entity-container');
+      const emfEl = document.getElementById('emf-val');
+      ghost.style.transition = `opacity ${GHOST_FADE_MS}ms ease`;   // only fade; position jumps while invisible
+      ghost.style.opacity = 0;
+      ghost.style.display = "block";
+
+      do {
+        await playWarning(GHOST_WARNING_MS, run);                  // WARNING before the virus appears
+        if (run !== ghostRun) return;
+        for (const dir of GHOST_SEQUENCE) {
+          if (run !== ghostRun) return;
+          ghost.style.top = GHOST_COORDS[dir].top;
+          ghost.style.left = GHOST_COORDS[dir].left;
+          ghost.classList.toggle('ghost-right', dir === "RIGHT");
+          emfEl.innerText = (95.0 + Math.random() * 4.9).toFixed(1) + "%";
+          document.getElementById('hud-alert-txt').style.display = "block";
+          playBeep(350, 0.15, 'triangle');
+          void ghost.offsetWidth;
+          ghost.style.opacity = 1;                                 // fade in
+          await ghostSleep(GHOST_FADE_MS + GHOST_VISIBLE_MS);
+          if (run !== ghostRun) return;
+          ghost.style.opacity = 0;                                 // fade out
+          await ghostSleep(GHOST_FADE_MS + GHOST_GAP_MS);
+        }
+        await ghostSleep(GHOST_LOOP_PAUSE_MS);
+      } while (LOOP_SEQUENCE && run === ghostRun);
+
+      if (run === ghostRun) {
+        await playWarning(GHOST_WARNING_MS, run);
+        if (run !== ghostRun) return;
+        gotoScreen('screen-hub');
+        document.getElementById('active-step-lbl').innerText = "CONTAINMENT HUB";
+      }
+    }
+
+    // VHS Static Glitch Animator
+    function startGlitchNoise() {
+      const gCvs = document.getElementById('cctv-glitch-canvas');
+      const gCtx = gCvs.getContext('2d');
+      gCvs.width = 400; gCvs.height = 250;
+
+      function drawNoise() {
+        if (document.getElementById('screen-cctv').classList.contains('active')) {
+          const imgData = gCtx.createImageData(gCvs.width, gCvs.height);
+          const data = imgData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const v = Math.random() * 255;
+            data[i] = v;
+            data[i+1] = v;
+            data[i+2] = v;
+            data[i+3] = 40;
+          }
+          gCtx.putImageData(imgData, 0, 0);
+        }
+        requestAnimationFrame(drawNoise);
+      }
+      drawNoise();
+    }
+
+    // --- Knock + keypad screen visuals ---
+    (function () {
+      const wave = document.getElementById('knock-wave');
+      for (let i = 0; i < 36; i++) {
+        const b = document.createElement('span');
+        b.style.animationDelay = (-Math.random() * 1.2) + 's';
+        b.style.animationDuration = (0.7 + Math.random() * 0.8) + 's';
+        wave.appendChild(b);
+      }
+      const grid = document.getElementById('kp-grid');
+      '123A456B789C*0#D'.split('').forEach(k => { const s = document.createElement('span'); s.innerText = k; grid.appendChild(s); });
+      setInterval(() => {
+        if (!document.getElementById('screen-keypad').classList.contains('active')) return;
+        grid.children[Math.floor(Math.random() * grid.children.length)].classList.toggle('lit');
+      }, 350);
+    })();
+
+    // =========================================================================
+    // ORGANIZER PANEL (hidden from players): open with F2, or triple-click the "A.L.I.C.E." title
+    // =========================================================================
+    const SHOW_GM_TEST_BUTTONS = true;   // set to false before the real game: removes the test buttons + the R/K keyboard cheats
+    const SHOW_STATUS_DOT = true;        // tiny dot in the bottom-left corner: green = hub connected, red = not connected
+
+    function toggleOrganizer() { document.getElementById('gm-drawer').classList.toggle('open'); }
+    function setUsbStatus(on, msg) {
+      const btn = document.getElementById('btn-serial'), st = document.getElementById('usb-status'), dot = document.getElementById('usb-dot');
+      btn.innerText = on ? "✓ USB Connected" : "🔌 Connect to USB";
+      btn.style.background = on ? "#00e676" : "#00bcd4";
+      st.innerText = on ? "● USB: CONNECTED" : "● USB: " + (msg || "NOT CONNECTED");
+      st.className = on ? 'usb-on' : 'usb-off';
+      dot.classList.toggle('ok', on);
+      dot.title = on ? "Hub connected" : "Hub not connected";
+      if (!on) espWriter = null;
+    }
+    window.addEventListener('keydown', e => { if (e.key === 'F2') { e.preventDefault(); toggleOrganizer(); } });
+    document.querySelector('header .brand').addEventListener('click', e => { if (e.detail === 3) toggleOrganizer(); });
+    if ("serial" in navigator) navigator.serial.addEventListener('disconnect', e => { if (e.target === espPort) setUsbStatus(false, "CABLE UNPLUGGED"); });
+    if (!SHOW_GM_TEST_BUTTONS) document.getElementById('gm-tests').remove();
+    if (!SHOW_STATUS_DOT) document.getElementById('usb-dot').style.display = 'none';
+    setUsbStatus(false);
+
+    // =========================================================================
+    // START FLOW: START ESCAPE ROOM -> briefing video -> "The Game Will Start..." -> locked screen + timer starts
+    // =========================================================================
+    const BRIEFING_VIDEO = "Breakout - Briefing Video.mp4";   // put this file in the same folder as index.html (change the extension here if needed)
+    let gameStarted = false, briefingDone = false;
+
+    function startEscapeRoom() {
+      playBeep(600, 0.08);
+      document.getElementById('start-screen').style.display = 'none';
+      const ov = document.getElementById('briefing-overlay'), v = document.getElementById('briefing-video');
+      ov.style.display = 'flex';
+      document.getElementById('briefing-skip').style.display = SHOW_GM_TEST_BUTTONS ? 'block' : 'none';   // skip button for the organizer only
+      v.onended = finishBriefing;
+      v.onerror = () => {
+        document.getElementById('briefing-error').innerText = 'Briefing video not found: "' + BRIEFING_VIDEO + '". Check the file name and folder.';
+        document.getElementById('briefing-skip').style.display = 'block';
+        document.getElementById('briefing-skip').innerText = 'Continue ▶';
+      };
+      v.src = encodeURI(BRIEFING_VIDEO);
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    }
+
+    function finishBriefing() {
+      if (briefingDone) return;
+      briefingDone = true;
+      const v = document.getElementById('briefing-video');
+      v.pause();
+      document.getElementById('briefing-overlay').style.display = 'none';
+      document.getElementById('game-start-prompt').style.display = 'flex';
+      [0, 1, 2].forEach(i => setTimeout(() => playBeep(500 + i * 150, 0.1, 'square'), 300 + i * 900));
+      setTimeout(beginGame, 3600);
+    }
+
+    function beginGame() {
+      document.getElementById('game-start-prompt').style.display = 'none';
+      gameStarted = true;
+      sendToESP("START_GAME");     // the hub only accepts the first RFID scan after this
+      startTimer();                // the 15 minutes start now, with the locked system screen showing
+      playChime();
+    }
+
+    // Keep the hub "armed" for the current puzzle: re-sent every 3s, so a late USB connection or a hub reboot can't leave the puzzle stuck
+    setInterval(() => {
+      if (!usbConnected) return;
+      if (flowState === 'tap') sendToESP("ACTIVATE_TAP", true);
+      else if (flowState === 'cctv') sendToESP("ACTIVATE_JOYSTICK", true);
+    }, 3000);
+
+    // --- RESET: tells the hub to reset every ESP32 (tap, joystick, vault), then restarts this page ---
+    async function resetGame() {
+      if (!confirm("Reset the whole game? This resets the website AND all ESP32 boards.")) return;
+      ghostRun++;
+      flowState = 'resetting';   // stops the automatic re-activation messages immediately
+      await sendToESP("RESET");
+      setTimeout(() => location.reload(), 600);   // the page reconnects to the hub by itself after reloading
+    }
+    // After a reload, re-open the hub automatically (no need to press the USB button again)
+    if ("serial" in navigator) navigator.serial.getPorts().then(ports => { if (ports.length) connectESP32Serial(ports[0]); });
+
+    // =========================================================================
+    // FULL-SCREEN TRANSITION ANIMATIONS: captcha solved / joystick solved / keypad solved
+    // =========================================================================
+    const KEYPAD_CODE_DISPLAY = "DA84";   // only used for the celebration animation (keep equal to SECRET_CODE on the ESP32)
+    let fxBusy = false;
+    function playFx(kind, then) {
+      if (fxBusy) return;
+      fxBusy = true;
+      const ov = rcEl('fx-overlay'), T = (fn, ms) => setTimeout(fn, ms);
+      let total = 2800;
+      if (kind === 'captcha') {
+        ov.innerHTML = `<div class="fx-check"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"/><path d="M28 52L44 68L74 34"/></svg><i></i><i></i></div><div class="fx-title">HUMAN VERIFIED</div><div class="fx-sub">TURING TEST PASSED - CLEARANCE LEVEL 2</div>`;
+        T(playChime, 900);
+      } else if (kind === 'joystick') {
+        ov.innerHTML = `<div class="fx-pad"><b data-d="UP">▲</b><b data-d="LEFT">◀</b><u>◉</u><b data-d="RIGHT">▶</b><b data-d="DOWN">▼</b></div><div class="fx-title">VECTOR ROUTE LOCKED</div><div class="fx-sub">SEQUENCE VERIFIED - VIRUS TRACE REDIRECTED</div>`;
+        GHOST_SEQUENCE.forEach((d, i) => T(() => {            // replays the entity sequence on the arrows
+          const el = ov.querySelector(`[data-d="${d}"]`);
+          el.classList.add('on'); playBeep(420 + i * 40, 0.07, 'triangle');
+          T(() => el.classList.remove('on'), 160);
+        }, 300 + i * 220));
+        const end = 300 + GHOST_SEQUENCE.length * 220;
+        T(() => { const c = ov.querySelector('u'); c.classList.add('locked'); c.innerText = '✓'; playChime(); }, end + 100);
+        total = end + 1700;
+      } else if (kind === 'cctv') {
+        ov.innerHTML = `<div class="fx-cam"><div class="fx-lens">📹</div><div class="fx-rec">● REC</div></div><div class="fx-title">TAP SEQUENCE VERIFIED</div><div class="fx-sub" id="fx-s">ESTABLISHING UPLINK TO NODE_04...</div>`;
+        [0, 1, 2, 3].forEach(i => T(() => playBeep(300 + i * 150, 0.08, 'square'), 300 + i * 450));
+        T(() => { rcEl('fx-s').innerText = 'SIGNAL ACQUIRED - DECRYPTING FEED...'; }, 1400);
+        T(() => { rcEl('fx-s').innerText = 'NODE_04: ALICE CORE // INFECTED'; playBuzzer(); }, 2400);
+        T(() => ov.insertAdjacentHTML('beforeend', '<div class="fx-crt"></div>'), 3000);   // CRT power-on flash
+        total = 3500;
+      } else {
+        ov.innerHTML = `<div class="fx-lock" id="fx-lock">🔒</div><div class="fx-code">${KEYPAD_CODE_DISPLAY.split('').map(() => '<span></span>').join('')}</div><div class="fx-title" id="fx-t">OVERRIDE ACCEPTED</div><div class="fx-sub" id="fx-s">DECRYPTING CONTAINMENT LOCK...</div>`;
+        [...ov.querySelectorAll('.fx-code span')].forEach((sp, i) => T(() => {
+          sp.innerText = KEYPAD_CODE_DISPLAY[i]; sp.classList.add('on'); playBeep(500 + i * 120, 0.1, 'square');
+        }, 400 + i * 380));
+        const open = 400 + KEYPAD_CODE_DISPLAY.length * 380 + 300;
+        T(() => {
+          const l = rcEl('fx-lock'); l.innerText = '🔓'; l.classList.add('open');
+          rcEl('fx-t').innerText = 'ACCESS GRANTED'; rcEl('fx-s').innerText = 'LOCK RELEASED';
+          playChime(); T(playChime, 250);
+        }, open);
+        T(() => ov.insertAdjacentHTML('beforeend', '<div class="fx-flash"></div>'), open + 1200);
+        total = open + 1700;
+      }
+      ov.className = 'show fx-' + kind;
+      T(() => { ov.className = ''; ov.innerHTML = ''; fxBusy = false; if (then) then(); }, total);
+    }
+
+    // --- 4. TAP (KNOCK) PUZZLE SOLVED -> CCTV / DIRECTIONAL PUZZLE ---
+    function solveKnock(force) {
+      if (!force && flowState !== 'tap') {
+        logHub("TAP_SOLVED ignored because current stage is: " + flowState);
+        addNotice("Tap puzzle reported solved, but the website is at stage '" + flowState + "' - ignored (earlier puzzle not finished).");
+        return;
+      }
+      if (flowState === 'cctv' || flowState === 'keypad-wait' || flowState === 'keypad' || flowState === 'done') return;
+      flowState = 'cctv';
+      sendToESP("STOP_TAP");   // silence the tap board (sound + LEDs)
+      playChime();
+      playFx('cctv', () => { startCCTVFeed(); sendToESP("ACTIVATE_JOYSTICK"); });
+    }
+
+    // --- 5. DIRECTIONAL (JOYSTICK) SOLVED -> KEYPAD PAGE, LOCKED UNTIL RFID IS SCANNED AGAIN ---
+    function solveJoystick(force) {
+      if (!force && flowState !== 'cctv') {
+        logHub("JOYSTICK_SOLVED ignored because current stage is: " + flowState);
+        addNotice("Joystick puzzle reported solved, but the website is at stage '" + flowState + "' - ignored (earlier puzzle not finished).");
+        return;
+      }
+      if (flowState === 'keypad-wait' || flowState === 'keypad' || flowState === 'done') return;
+      flowState = 'keypad-wait';
+      ghostRun++;   // stop the entity sequence
+      sendToESP("JOYSTICK_DONE");
+      playFx('joystick', () => {
+        gotoScreen('screen-keypad');
+        document.getElementById('active-step-lbl').innerText = "KEYPAD LOCKED - SCAN RFID";
+        if (pendingKeypadScan) { pendingKeypadScan = false; activateKeypad(); }   // card #2 was scanned during the animation
+      });
+    }
+
+    // --- 6. KEYPAD SOLVED -> VICTORY! ---
+    function solveKeypad() {
+      flowState = 'done';
+      stopTimer();
+      playFx('keypad', showVictory);
+    }
+    function showVictory() {
+      playChime();
+      document.getElementById('node-keypad').className = 'puzzle-node solved-puzzle';
+      document.getElementById('badge-keypad').className = 'node-badge badge-solved';
+      document.getElementById('badge-keypad').innerText = 'SOLVED ✓';
+
+      document.getElementById('active-step-lbl').innerText = "CONTAINMENT OVERRIDE";
+      gotoScreen('screen-victory');
+
+      document.getElementById('ai-status').innerText = "CONTAINMENT SAFE";
+      document.getElementById('ai-status').style.borderColor = "var(--green)";
+      document.getElementById('ai-status').style.color = "var(--green)";
+    }
+
+    // --- AMBIENT NEURAL CANVAS BACKGROUND ---
+    const nCvs = document.getElementById('neural-bg');
+    const nCtx = nCvs.getContext('2d');
+    let width, height, nodes = [];
+    function resize() {
+      width = nCvs.width = window.innerWidth;
+      height = nCvs.height = window.innerHeight;
+      nodes = [];
+      for (let i = 0; i < 40; i++) {
+        nodes.push({ x: Math.random() * width, y: Math.random() * height, vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5 });
+      }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    function renderNeural() {
+      nCtx.clearRect(0, 0, width, height);
+      for (let i = 0; i < nodes.length; i++) {
+        let n = nodes[i];
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > width) n.vx *= -1;
+        if (n.y < 0 || n.y > height) n.vy *= -1;
+        nCtx.fillStyle = '#00f3ff';
+        nCtx.beginPath(); nCtx.arc(n.x, n.y, 2, 0, Math.PI * 2); nCtx.fill();
+        for (let j = i + 1; j < nodes.length; j++) {
+          let n2 = nodes[j];
+          let dist = Math.hypot(n.x - n2.x, n.y - n2.y);
+          if (dist < 130) {
+            nCtx.strokeStyle = `rgba(0, 243, 255, ${1 - dist / 130})`;
+            nCtx.lineWidth = 0.5;
+            nCtx.beginPath(); nCtx.moveTo(n.x, n.y); nCtx.lineTo(n2.x, n2.y); nCtx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(renderNeural);
+    }
+    renderNeural();
+  </script>
+</body>
+</html>
