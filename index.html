@@ -750,16 +750,12 @@
     .sb-notice { padding: 6px 10px; color: #ffb74d; font-size: 14px; }
     #hub-log { flex-basis: 100%; margin: 0; padding: 8px 10px; max-height: 190px; overflow: auto; white-space: pre-wrap; background: #02070d; color: #9fffe0; border: 1px solid #1c3252; border-radius: 4px; font: 14px Consolas, monospace; }
     #usb-dot { z-index: 8000; }
-    /* --- START SCREEN, BRIEFING VIDEO, "GAME WILL START" PROMPT --- */
+    /* --- START SCREEN + "GAME WILL START" PROMPT --- */
     #start-screen { position: fixed; inset: 0; z-index: 7000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: radial-gradient(circle at center, #0b2233 0%, #02070d 70%); }
     .start-title { font-size: clamp(56px, 12vw, 120px); font-weight: bold; letter-spacing: 12px; color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
     .start-sub { font-size: 18px; letter-spacing: 3px; color: #ff6b81; margin-bottom: 30px; }
     #start-btn { padding: 24px 64px; font-size: 30px; font-weight: bold; letter-spacing: 3px; color: #fff; background: rgba(0, 229, 255, 0.12); border: 3px solid var(--cyan); border-radius: 12px; cursor: pointer; animation: pulse 1.6s infinite; }
     #start-btn:hover { background: var(--cyan); color: #000; }
-    #briefing-overlay { position: fixed; inset: 0; z-index: 7100; display: none; background: #000; align-items: center; justify-content: center; }
-    #briefing-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
-    #briefing-error { position: absolute; top: 40%; left: 0; right: 0; text-align: center; color: #ff6b81; font-size: 22px; padding: 0 30px; }
-    #briefing-skip { position: absolute; right: 20px; bottom: 20px; display: none; padding: 10px 18px; font-size: 16px; background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer; }
     #game-start-prompt { position: fixed; inset: 0; z-index: 7200; display: none; align-items: center; justify-content: center; background: #000; }
     .gsp-text { font-size: clamp(30px, 6vw, 64px); font-weight: bold; color: var(--cyan); text-shadow: 0 0 25px var(--cyan); text-align: center; animation: fxRise 0.8s ease-out both; }
     .gsp-dots { animation: kpBlink 0.9s infinite; }
@@ -779,7 +775,7 @@
       <div><h1>A.L.I.C.E.</h1><div class="alice-meaning">Artificial Labile Intelligence Cybernated Existence</div></div>
       <span class="status-badge" id="ai-status">LOCKDOWN PROTOCOL ACTIVE</span>
     </div>
-    <div id="game-timer"><div class="t-label" id="t-label">TIME LEFT</div><div class="t-digits" id="t-digits">15:00</div><div id="timer-pen">-30s</div></div>
+    <div id="game-timer"><div class="t-label" id="t-label">TIME LEFT</div><div class="t-digits" id="t-digits">10:00</div><div id="timer-pen">-30s</div></div>
     <div style="font-size: 16px; color: var(--cyan); letter-spacing: 2px;">
       NODE: <span id="active-step-lbl">CLEARANCE GATE</span>
     </div>
@@ -1040,11 +1036,6 @@
     <div class="start-meaning">Artificial Labile Intelligence Cybernated Existence</div>
     <div class="start-sub">SYSTEM LOCKDOWN PROTOCOL ACTIVE</div>
     <button id="start-btn" onclick="startEscapeRoom()">START ESCAPE ROOM</button>
-  </div>
-  <div id="briefing-overlay">
-    <video id="briefing-video" playsinline disablepictureinpicture></video>
-    <div id="briefing-error"></div>
-    <button id="briefing-skip" onclick="finishBriefing()">Skip ▶</button>
   </div>
   <div id="game-start-prompt"><div class="gsp-text">The Game Will Start<span class="gsp-dots">...</span></div></div>
 
@@ -1388,8 +1379,8 @@
     }
     showRiddle();
 
-    // --- GAME TIMER: 15:00, starts at the first RFID scan, -30s per wrong riddle answer, stops when the keypad is solved ---
-    const GAME_SECONDS = 15 * 60, PENALTY_SECONDS = 30;
+    // --- GAME TIMER: 10:00, starts at the first RFID scan, -30s per wrong riddle answer, stops when the keypad is solved ---
+    const GAME_SECONDS = 10 * 60, PENALTY_SECONDS = 30;
     let timeLeft = GAME_SECONDS, timerInt = null, timerStarted = false;
     function renderTimer() {
       const m = String(Math.floor(timeLeft / 60)).padStart(2, '0'), s = String(timeLeft % 60).padStart(2, '0');
@@ -2015,33 +2006,13 @@
     setUsbStatus(false);
 
     // =========================================================================
-    // START FLOW: START ESCAPE ROOM -> briefing video -> "The Game Will Start..." -> locked screen + timer starts
+    // START FLOW: START ESCAPE ROOM -> "The Game Will Start..." -> locked screen + timer starts
     // =========================================================================
-    const BRIEFING_VIDEO = "Breakout - Briefing Video.mp4";   // put this file in the same folder as index.html (change the extension here if needed)
-    let gameStarted = false, briefingDone = false;
+    let gameStarted = false;
 
     function startEscapeRoom() {
       playBeep(600, 0.08);
       document.getElementById('start-screen').style.display = 'none';
-      const ov = document.getElementById('briefing-overlay'), v = document.getElementById('briefing-video');
-      ov.style.display = 'flex';
-      document.getElementById('briefing-skip').style.display = SHOW_GM_TEST_BUTTONS ? 'block' : 'none';   // skip button for the organizer only
-      v.onended = finishBriefing;
-      v.onerror = () => {
-        document.getElementById('briefing-error').innerText = 'Briefing video not found: "' + BRIEFING_VIDEO + '". Check the file name and folder.';
-        document.getElementById('briefing-skip').style.display = 'block';
-        document.getElementById('briefing-skip').innerText = 'Continue ▶';
-      };
-      v.src = encodeURI(BRIEFING_VIDEO);
-      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
-    }
-
-    function finishBriefing() {
-      if (briefingDone) return;
-      briefingDone = true;
-      const v = document.getElementById('briefing-video');
-      v.pause();
-      document.getElementById('briefing-overlay').style.display = 'none';
       document.getElementById('game-start-prompt').style.display = 'flex';
       [0, 1, 2].forEach(i => setTimeout(() => playBeep(500 + i * 150, 0.1, 'square'), 300 + i * 900));
       setTimeout(beginGame, 3600);
@@ -2051,7 +2022,7 @@
       document.getElementById('game-start-prompt').style.display = 'none';
       gameStarted = true;
       sendToESP("START_GAME");     // the hub only accepts the first RFID scan after this
-      startTimer();                // the 15 minutes start now, with the locked system screen showing
+      startTimer();                // the 10 minutes start now, with the locked system screen showing
       playChime();
     }
 
