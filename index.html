@@ -1154,7 +1154,7 @@
       rows.push(['6 · Vault (maglock)',
         v === 'U' ? ['bad', 'UNKNOWN - USB not connected'] :
         (v === 'X' || v === undefined) ? ['bad', 'OFFLINE - no signal from this board'] :
-        idx >= 7 ? (v === '2' ? ['done', 'UNLOCKED ✓'] : ['warn', 'should be unlocked but still LOCKED']) :
+        idx >= 7 ? (v === '2' ? ['done', 'UNLOCKED ✓'] : ['warn', 'should be unlocked but still LOCKED - the hub keeps re-sending the unlock']) :
         v === '0' ? ['wait', 'LOCKED - maglock holding'] : ['warn', 'UNLOCKED TOO EARLY']]);
       el.innerHTML = rows.map(r => '<div class="sb-row sb-' + r[1][0] + '"><span>' + r[0] + '</span><b>' + r[1][1] + '</b></div>').join('') +
         (notices.length ? '<div class="sb-notice">⚠ ' + notices.join('<br>⚠ ') + '</div>' : '');
@@ -2128,6 +2128,7 @@
     function solveKeypad() {
       flowState = 'done';
       stopTimer();
+      sendToESP("UNLOCK_VAULT");   // the hub keeps telling the vault to open until the vault confirms (also works for the test button)
       playFx('keypad', showVictory);
     }
     function showVictory() {
